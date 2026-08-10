@@ -137,6 +137,38 @@ def preload_ocr(langs: Optional[List[str]] = None) -> None:
     _get_easyocr_reader(langs)
 
 
+def _drop_implausible_lines(lines: List[dict]) -> List[dict]:
+    """Écarte les détections EasyOCR qui ne peuvent pas être du texte réel.
+
+    Sur des pages illustrées, le détecteur "voit" parfois du texte dans des traits de dessin
+    (silhouettes d'arbres, plis) et lui associe un caractère au hasard, avec une bbox énorme
+    et quasi carrée — sans rapport avec les vraies lignes de texte de la page, toujours bien
+    plus larges que hautes. On compare chaque détection aux autres détections de la même page
+    (hauteur médiane) plutôt qu'à un seuil absolu, pour rester générique quel que soit le DPI.
+    """
+    if len(lines) < 2:
+        return lines
+
+    heights = sorted((l["bbox"][3] - l["bbox"][1]) for l in lines)
+    median_height = heights[len(heights) // 2]
+    if median_height <= 0:
+        return lines
+
+    plausible = []
+    for line in lines:
+        x0, y0, x1, y1 = line["bbox"]
+        width, height = x1 - x0, y1 - y0
+        if height <= 0:
+            continue
+        aspect_ratio = width / height
+        is_huge = height > 4 * median_height
+        is_squarish = aspect_ratio < 1.5
+        if is_huge or is_squarish:
+            continue
+        plausible.append(line)
+    return plausible
+
+
 def ocr_page_blocks(image_rgb, langs: Optional[List[str]] = None) -> List[TextBlock]:
     """Fallback OCR (EasyOCR) : détecte les lignes de texte puis les regroupe en blocs.
 
@@ -162,6 +194,7 @@ def ocr_page_blocks(image_rgb, langs: Optional[List[str]] = None) -> List[TextBl
         ys = [p[1] for p in polygon]
         lines.append({"bbox": [min(xs), min(ys), max(xs), max(ys)], "text": text})
 
+    lines = _drop_implausible_lines(lines)
     if not lines:
         return []
 

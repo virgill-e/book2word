@@ -32,10 +32,14 @@ Ouvrez un terminal dans le dossier `book2word` (celui qui contient ce fichier), 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 Sous Windows (invite de commandes) remplacez la 2ᵉ ligne par : `.venv\Scripts\activate`
+
+On utilise `python3 -m pip` plutôt que `pip` tout court : sur certains systèmes (macOS en
+particulier), la commande `pip` seule n'existe pas telle quelle même quand pip est bien
+installé — `python3 -m pip` fonctionne toujours.
 
 Cette étape télécharge notamment un modèle de reconnaissance de texte (~100 Mo) : elle peut
 prendre quelques minutes selon la connexion. Elle ne se refait pas au lancement suivant.
@@ -101,8 +105,13 @@ regardez ces pages en particulier.
 **"Fichier introuvable"** — vérifiez le chemin du PDF (glissez-déposez le fichier dans le
 terminal pour obtenir son chemin exact plutôt que de le taper à la main).
 
-**Une dépendance manque / erreur `ImportError`** — relancez `pip install -r requirements.txt`
-dans le terminal (après avoir activé l'environnement, étape 2).
+**Une dépendance manque / erreur `ImportError`** — relancez
+`python3 -m pip install -r requirements.txt` dans le terminal (après avoir activé
+l'environnement, étape 2).
+
+**`zsh: command not found: pip`** — utilisez `python3 -m pip install ...` au lieu de
+`pip install ...` (voir étape 2). Si l'erreur persiste, l'environnement virtuel n'est
+probablement pas activé : relancez `source .venv/bin/activate` d'abord.
 
 **Le texte extrait est incohérent, tronqué ou plein de caractères bizarres** — le PDF contient
 probablement une couche de texte native de mauvaise qualité (fréquent sur les scans/photos).

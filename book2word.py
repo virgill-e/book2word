@@ -11,7 +11,9 @@ except ImportError as exc:
     print(
         "Erreur : une dépendance requise est manquante ({}).\n"
         "Installez les dépendances avec :\n\n"
-        "    pip install -r requirements.txt\n".format(exc.name or exc)
+        "    {} -m pip install -r requirements.txt\n\n"
+        "(si la commande ci-dessus échoue aussi, relisez l'étape 2 du README : "
+        "il faut d'abord créer et activer l'environnement virtuel)".format(exc.name or exc, sys.executable)
     )
     sys.exit(1)
 
