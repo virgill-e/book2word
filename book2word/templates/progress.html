@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="card">
+  <h2>Conversion de « {{ pdf_name }} »</h2>
+
+  <div id="running-block">
+    <p class="hint" id="status-text">Démarrage…</p>
+    <div class="progress-outer">
+      <div class="progress-inner" id="progress-bar" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <div id="done-block" class="hidden">
+    <div class="alert alert-success">Conversion terminée.</div>
+    <table class="table">
+      <tr><th>Pages traitées</th><td id="n-pages"></td></tr>
+      <tr><th>Pages à vérifier</th><td id="pages-check"></td></tr>
+    </table>
+    <a id="download-link" class="btn btn-primary" href="#">Télécharger le document</a>
+    <a class="btn" href="{{ url_for('index') }}">Retour à l'accueil</a>
+  </div>
+
+  <div id="error-block" class="hidden">
+    <div class="alert alert-error">Une erreur est survenue : <span id="error-text"></span></div>
+    <a class="btn" href="{{ url_for('index') }}">Retour à l'accueil</a>
+  </div>
+</section>
+
+<script>
+const jobId = {{ job_id | tojson }};
+
+function poll() {
+  fetch(`/api/status/${jobId}`)
+    .then(r => r.json())
+    .then(job => {
+      if (job.status === 'running') {
+        const total = job.total_pages || 0;
+        const current = job.current_page || 0;
+        const pct = total ? Math.round((current / total) * 100) : 0;
+        document.getElementById('progress-bar').style.width = pct + '%';
+        document.getElementById('status-text').textContent =
+          total ? `Page ${current}/${total}…` : 'Chargement du moteur de reconnaissance de texte…';
+        setTimeout(poll, 1000);
+      } else if (job.status === 'done') {
+        document.getElementById('running-block').classList.add('hidden');
+        document.getElementById('done-block').classList.remove('hidden');
+        document.getElementById('n-pages').textContent = job.report.n_pages;
+        const toCheck = job.report.pages_to_check;
+        document.getElementById('pages-check').textContent =
+          toCheck.length ? toCheck.join(', ') : 'aucune';
+        document.getElementById('download-link').href = `/download/${job.report.output_name}`;
+      } else if (job.status === 'error') {
+        document.getElementById('running-block').classList.add('hidden');
+        document.getElementById('error-block').classList.remove('hidden');
+        document.getElementById('error-text').textContent = job.error;
+      }
+    });
+}
+poll();
+</script>
+
+{% endblock %}

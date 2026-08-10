@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>book2word</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="logo">📖 book2word</span>
+      <span class="tagline">Livre PDF → document Word</span>
+      <form action="{{ url_for('shutdown') }}" method="post" class="quit-form"
+            onsubmit="return confirm('Fermer book2word ?');">
+        <button type="submit" class="btn-quit">Quitter l'application</button>
+      </form>
+    </div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    <div class="footer-inner">Application locale — rien n'est envoyé sur internet.</div>
+  </footer>
+</body>
+</html>

@@ -14,17 +14,35 @@ codée en dur ; les cas particuliers passent par des paramètres CLI, pas par du
 ## Architecture
 
 ```
-book2word.py            point d'entrée, garde-fou ImportError
+book2word.py            point d'entrée CLI/assistant terminal, garde-fou ImportError
+webapp.py               point d'entrée interface web locale, garde-fou ImportError
 book2word/
   cli.py                orchestration : process_pdf() (logique) + argparse + logging fichier
   ui.py                 présentation console (rich) : assistant interactif + rendu classique
+  web.py                interface web locale (Flask, 127.0.0.1 uniquement) : mêmes options,
+                        pilotées par formulaire ; jobs de conversion en thread + polling JSON
+  templates/, static/   pages HTML et CSS de l'interface web
   text_extract.py       extraction texte natif (PyMuPDF) + fallback OCR (EasyOCR)
   image_clean.py        rasterisation page, recadrage auto, suppression du texte sur l'image
   docx_builder.py       construction du .docx (image + texte, page par page)
-input/                  PDF à convertir, listés et choisis par numéro (assistant)
+input/                  PDF à convertir, listés et choisis par numéro (assistant/web)
 output/                 .docx + .log générés, nommés d'après le PDF (incrémenté si collision)
 template.docx           police/mise en page par défaut du .docx généré (optionnel)
 ```
+
+`web.py` ne duplique aucune logique : il appelle `cli.process_pdf`/`resolve_output_path`/
+`resolve_template_path` exactement comme `ui.py`, seul le rendu diffère (HTML + JSON au lieu
+de rich). Un nouveau mode de pilotage (CLI, terminal riche, web, futur GUI natif) doit toujours
+passer par ces mêmes fonctions de `cli.py` plutôt que ré-implémenter le flux de traitement.
+
+Le serveur Flask n'écoute que sur `127.0.0.1` (jamais `0.0.0.0`) — c'est une exigence produit,
+pas un détail : les livres traités peuvent être sous droits d'auteur, rien ne doit être
+accessible depuis le réseau. Un job de conversion tourne dans un `threading.Thread` séparé
+(le traitement dure plusieurs minutes) ; l'état est dans `JOBS` (dict protégé par `JOBS_LOCK`)
+et interrogé par le navigateur via `/api/status/<job_id>` (polling JS toutes les secondes,
+pas de websocket). `TEMPLATES_AUTO_RELOAD=True` est activé explicitement : sans ça, Flask ne
+recharge pas les templates quand `debug=False`, ce qui a piégé le développement initial
+(modification de `base.html` invisible sans redémarrage du serveur).
 
 `input/`, `output/` et le contenu de `debug/` ne sont jamais versionnés (`.gitignore`) — seuls
 des `.gitkeep` gardent les deux premiers dossiers présents après un clone. `cli.list_input_pdfs`

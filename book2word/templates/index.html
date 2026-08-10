@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<section class="card">
+  <h2>Convertir un livre</h2>
+  <form action="{{ url_for('convert') }}" method="post" enctype="multipart/form-data">
+
+    <div class="field">
+      <label for="existing_pdf">Fichier déjà importé</label>
+      <select name="existing_pdf" id="existing_pdf">
+        <option value="">— choisir —</option>
+        {% for name in inputs %}
+          <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field-or">ou</div>
+
+    <div class="field">
+      <label for="upload">Importer un nouveau PDF</label>
+      <input type="file" name="upload" id="upload" accept="application/pdf">
+    </div>
+
+    <div class="field checkbox-field">
+      <label>
+        <input type="checkbox" name="force_ocr">
+        Forcer la reconnaissance par image (OCR) sur toutes les pages
+      </label>
+      <p class="hint">À cocher si le texte obtenu est habituellement incohérent ou tronqué.</p>
+    </div>
+
+    <details class="advanced">
+      <summary>Options avancées</summary>
+
+      <div class="field">
+        <label for="dpi">Résolution des images (points par pouce)</label>
+        <input type="number" name="dpi" id="dpi" value="300" min="72" max="600">
+      </div>
+
+      <div class="field">
+        <label for="ocr_lang">Langue de la reconnaissance de texte</label>
+        <input type="text" name="ocr_lang" id="ocr_lang" value="fr">
+      </div>
+
+      <div class="field checkbox-field">
+        <label><input type="checkbox" name="auto_crop" checked> Recadrer automatiquement les bordures sombres</label>
+      </div>
+
+      <div class="field checkbox-field">
+        <label><input type="checkbox" name="debug"> Sauvegarder les images avant/après nettoyage (dossier debug/)</label>
+      </div>
+
+      <p class="hint">
+        Modèle de mise en page :
+        {% if has_template %}
+          <strong>{{ default_template_name }}</strong> (police et mise en page appliquées automatiquement)
+        {% else %}
+          aucun (police par défaut) — ajoutez <code>template.docx</code> à la racine du projet pour en utiliser un
+        {% endif %}
+      </p>
+    </details>
+
+    <button type="submit" class="btn btn-primary">Convertir</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Résultats</h2>
+  {% if outputs %}
+    <table class="table">
+      <thead>
+        <tr><th>Document</th><th>Taille</th><th></th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for f in outputs %}
+        <tr>
+          <td>{{ f.name }}</td>
+          <td>{{ f.size_mb }} Mo</td>
+          <td><a class="btn btn-small" href="{{ url_for('download', filename=f.name) }}">Télécharger</a></td>
+          <td>
+            <form action="{{ url_for('delete', kind='output', filename=f.name) }}" method="post"
+                  onsubmit="return confirm('Supprimer {{ f.name }} ?');">
+              <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="hint">Aucun document généré pour le moment.</p>
+  {% endif %}
+</section>
+
+{% endblock %}
