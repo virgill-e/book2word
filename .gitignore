@@ -5,6 +5,7 @@ __pycache__/
 
 # Sorties générées et fichiers de travail (contenu de livres, potentiellement volumineux/protégé)
 *.docx
+!template.docx
 *.log
 debug/
 *.pdf

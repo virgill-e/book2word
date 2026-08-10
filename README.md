@@ -79,8 +79,17 @@ Options utiles :
 | `--no-crop` | Désactive le recadrage automatique des bordures sombres (pages photographiées). |
 | `--debug` | Sauvegarde les images avant/après nettoyage dans un dossier `debug/`, pour vérifier visuellement. |
 | `--verbose` | Affiche le détail technique dans le terminal (par défaut, il va uniquement dans un fichier `.log`). |
+| `--template modele.docx` | Document Word de base pour la police et la mise en page (voir ci-dessous). |
 
 Voir toutes les options : `python3 book2word.py --help`
+
+### Personnaliser la police du document généré
+
+Si un fichier `template.docx` se trouve à la racine du projet, il est utilisé automatiquement
+comme base : le texte généré reprend sa police et sa mise en page (marges, taille de page)
+au lieu du style par défaut. Pour changer de police, remplacez ce fichier par un `.docx` dont
+le style *Normal* a la police souhaitée (dans Word : clic droit sur "Normal" dans le panneau
+des styles → Modifier → choisir la police), ou indiquez un autre fichier avec `--template`.
 
 ---
 

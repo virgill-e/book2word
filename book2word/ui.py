@@ -85,6 +85,7 @@ def render_summary(report, console_: Console, log_path: str, debug: bool) -> Non
         )
     else:
         table.add_row("Pages à vérifier", "[green]aucune[/green]")
+    table.add_row("Modèle de mise en page", report.template_path or "aucun (police par défaut)")
     table.add_row("Détail technique", log_path)
     if debug:
         table.add_row("Images avant/après", "debug/")
@@ -191,13 +192,24 @@ def run_wizard() -> None:
     advanced = Confirmation.ask(
         "\nConfigurer les options avancées (résolution, langue, recadrage, débogage) ?", default=False
     )
+    from book2word.cli import resolve_template_path
+
     if advanced:
         dpi = IntPrompt.ask("Résolution des images en points par pouce (plus haut = plus net mais plus lourd)", default=300)
         ocr_lang = Prompt.ask("Langue pour la reconnaissance de texte (code EasyOCR)", default="fr")
         auto_crop = Confirmation.ask("Recadrer automatiquement les bordures sombres des pages photographiées ?", default=True)
         debug = Confirmation.ask("Sauvegarder les images avant/après nettoyage pour vérification (dossier debug/) ?", default=False)
+        default_template = resolve_template_path(None) or ""
+        template_input = Prompt.ask(
+            "Document .docx de base pour la police/mise en page (laisser vide pour aucun)",
+            default=default_template,
+        )
+        template_path = template_input.strip() or None
     else:
         dpi, ocr_lang, auto_crop, debug = 300, "fr", True, False
+        template_path = None
+
+    resolved_template = resolve_template_path(template_path)
 
     console.print()
     recap = Table(show_header=False, box=None)
@@ -206,6 +218,7 @@ def run_wizard() -> None:
     recap.add_row("Reconnaissance de texte", "OCR forcé sur toutes les pages" if force_ocr else "automatique (texte natif puis OCR si besoin)")
     recap.add_row("Résolution", f"{dpi} dpi")
     recap.add_row("Recadrage automatique", "activé" if auto_crop else "désactivé")
+    recap.add_row("Modèle de mise en page", resolved_template or "aucun (police par défaut)")
     console.print(Panel(recap, title="Récapitulatif", border_style="cyan"))
 
     if not Confirmation.ask("\nLancer le traitement ?", default=True):
@@ -229,6 +242,7 @@ def run_wizard() -> None:
             auto_crop=auto_crop,
             ocr_lang=ocr_lang,
             debug=debug,
+            template_path=template_path,
         )
     except KeyboardInterrupt:
         console.print("\n[yellow]Traitement interrompu.[/yellow]")

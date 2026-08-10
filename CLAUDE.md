@@ -33,7 +33,11 @@ Flux par page (dans `cli.process_pdf`) :
    `cv2.inpaint`), avec détection de résultat suspect.
 6. `reading_order` → ordonne les blocs de texte pour la sortie (colonnes gauche→droite,
    haut→bas dans chaque colonne).
-7. `docx_builder.build_docx` → image puis texte, page par page.
+7. `docx_builder.build_docx` → image puis texte, page par page. Si un `template.docx` existe
+   à la racine du projet (ou `--template <chemin>`), il sert de document de base : le style
+   "Normal" du modèle fournit la police/mise en page, sans qu'aucun code de style ne soit
+   nécessaire côté `docx_builder` (héritage natif de python-docx). Résolu par
+   `cli.resolve_template_path`.
 
 `cli.process_pdf` ne fait **aucun print** : il journalise (`logging.getLogger("book2word")`)
 et retourne un `Report`/`PageReport` structuré. `ui.py` est seul responsable de l'affichage

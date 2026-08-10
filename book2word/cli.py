@@ -26,6 +26,18 @@ BBox = tuple
 
 logger = logging.getLogger("book2word")
 
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_TEMPLATE_PATH = os.path.join(_PROJECT_ROOT, "template.docx")
+
+
+def resolve_template_path(template_path: Optional[str]) -> Optional[str]:
+    """Si aucun modèle n'est précisé, utilise `template.docx` à la racine du projet s'il existe."""
+    if template_path:
+        return template_path
+    if os.path.isfile(DEFAULT_TEMPLATE_PATH):
+        return DEFAULT_TEMPLATE_PATH
+    return None
+
 
 @dataclass
 class PageReport:
@@ -42,6 +54,7 @@ class PageReport:
 class Report:
     output_path: str
     pages: List[PageReport] = field(default_factory=list)
+    template_path: Optional[str] = None
 
     @property
     def total_warnings(self) -> int:
@@ -89,17 +102,19 @@ def process_pdf(
     auto_crop: bool = True,
     ocr_lang: str = "fr",
     force_ocr: bool = False,
+    template_path: Optional[str] = None,
     on_page_done: Optional[Callable[[int, int], None]] = None,
 ) -> Report:
     """Traite le PDF page par page. Le détail technique est journalisé (logger "book2word"),
     seul un rapport structuré est retourné pour l'affichage (laissé à l'appelant)."""
+    template_path = resolve_template_path(template_path)
     document = fitz.open(pdf_path)
     total_pages = document.page_count
     debug_dir = "debug"
     if debug:
         os.makedirs(debug_dir, exist_ok=True)
 
-    report = Report(output_path=output_path)
+    report = Report(output_path=output_path, template_path=template_path)
     pages_out = []
     zoom = dpi / 72.0
 
@@ -178,9 +193,11 @@ def process_pdf(
         if on_page_done:
             on_page_done(page_num, total_pages)
 
-    build_docx(pages_out, output_path)
+    build_docx(pages_out, output_path, template_path=template_path)
     document.close()
 
+    if template_path:
+        logger.info("Modèle utilisé : %s", template_path)
     logger.info("Document généré : %s (%s page(s))", output_path, len(pages_out))
     return report
 
@@ -246,6 +263,14 @@ Guide rapide :
         action="store_true",
         help="Affiche aussi le détail technique dans la console (par défaut : dans book2word.log uniquement)",
     )
+    parser.add_argument(
+        "--template",
+        default=None,
+        help=(
+            "Document .docx de base à utiliser pour la police/mise en page (défaut : "
+            f"{os.path.basename(DEFAULT_TEMPLATE_PATH)} à la racine du projet, si présent)"
+        ),
+    )
     return parser
 
 
@@ -278,6 +303,7 @@ def main() -> None:
         ocr_lang=args.ocr_lang,
         force_ocr=args.force_ocr,
         verbose=args.verbose,
+        template_path=args.template,
     )
 
 
