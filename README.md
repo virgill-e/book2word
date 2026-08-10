@@ -53,21 +53,31 @@ l'outil : `source .venv/bin/activate` (ou `.venv\Scripts\activate` sous Windows)
 
 ### Mode assistant (recommandé)
 
-Lancez simplement :
+Déposez le(s) PDF à convertir dans le dossier `input/`, puis lancez simplement :
 
 ```bash
 python3 book2word.py
 ```
 
-L'outil pose quelques questions (chemin du PDF, nom du fichier à créer...) avec une valeur
-par défaut entre parenthèses — appuyez sur Entrée pour l'accepter. Une barre de progression
-s'affiche pendant le traitement, puis un résumé indique où se trouve le résultat.
+L'outil affiche la liste des PDF trouvés dans `input/` : tapez le numéro de celui à convertir.
+Le document Word est déposé automatiquement dans `output/`, avec le même nom que le PDF (ex.
+`input/mon_livre.pdf` → `output/mon_livre.docx`). Si ce nom existe déjà, un numéro est ajouté
+automatiquement (`mon_livre (2).docx`) — rien n'est jamais écrasé.
+
+Le reste des questions (une valeur par défaut est proposée entre parenthèses — appuyez sur
+Entrée pour l'accepter) porte sur la reconnaissance du texte et les options avancées. Une
+barre de progression s'affiche pendant le traitement, puis un résumé indique où se trouve
+le résultat.
 
 ### Mode ligne de commande (utilisateurs avancés / scripts)
 
 ```bash
-python3 book2word.py mon_livre.pdf resultat.docx
+python3 book2word.py input/mon_livre.pdf
+python3 book2word.py mon_livre.pdf resultat.docx   # chemin de sortie explicite (optionnel)
 ```
+
+Sans deuxième argument, le fichier est aussi déposé dans `output/` en suivant la même règle
+de nommage qu'en mode assistant.
 
 Options utiles :
 
@@ -95,13 +105,13 @@ des styles → Modifier → choisir la police), ou indiquez un autre fichier ave
 
 ## 3. Comprendre le résultat
 
-Après traitement, vous obtenez :
+Après traitement, vous obtenez dans `output/` :
 
-- **le fichier `.docx`** demandé : une page = une image nettoyée + le texte en dessous.
+- **le fichier `.docx`** : une page = une image nettoyée + le texte en dessous.
 - **un fichier `.log`** (même nom, extension `.log`) : le détail technique de chaque page —
   utile si quelque chose semble anormal, pas nécessaire pour un usage normal.
-- **un dossier `debug/`** (uniquement si vous avez activé cette option) : les images avant et
-  après nettoyage, pour vérifier page par page.
+- **un dossier `debug/`** (à la racine du projet, uniquement si vous avez activé cette option) :
+  les images avant et après nettoyage, pour vérifier page par page.
 
 Le résumé affiché en fin de traitement liste les **pages à vérifier** : celles où le
 nettoyage automatique ou le recadrage n'est pas certain à 100 %. Ouvrez le `.docx` et
@@ -111,8 +121,8 @@ regardez ces pages en particulier.
 
 ## 4. Dépannage
 
-**"Fichier introuvable"** — vérifiez le chemin du PDF (glissez-déposez le fichier dans le
-terminal pour obtenir son chemin exact plutôt que de le taper à la main).
+**"Aucun PDF trouvé dans input/"** — placez votre fichier dans le dossier `input/` à la
+racine du projet, puis relancez `python3 book2word.py`.
 
 **Une dépendance manque / erreur `ImportError`** — relancez
 `python3 -m pip install -r requirements.txt` dans le terminal (après avoir activé

@@ -21,7 +21,16 @@ book2word/
   text_extract.py       extraction texte natif (PyMuPDF) + fallback OCR (EasyOCR)
   image_clean.py        rasterisation page, recadrage auto, suppression du texte sur l'image
   docx_builder.py       construction du .docx (image + texte, page par page)
+input/                  PDF à convertir, listés et choisis par numéro (assistant)
+output/                 .docx + .log générés, nommés d'après le PDF (incrémenté si collision)
+template.docx           police/mise en page par défaut du .docx généré (optionnel)
 ```
+
+`input/`, `output/` et le contenu de `debug/` ne sont jamais versionnés (`.gitignore`) — seuls
+des `.gitkeep` gardent les deux premiers dossiers présents après un clone. `cli.list_input_pdfs`
+et `cli.resolve_output_path` résolvent ces chemins par rapport à la racine du projet
+(`_PROJECT_ROOT`, calculé depuis `__file__`), pas depuis le répertoire courant — l'outil se
+comporte donc pareil quel que soit l'endroit d'où il est lancé.
 
 Flux par page (dans `cli.process_pdf`) :
 1. `extract_page_text` (PyMuPDF) → blocs de texte natif + bbox, en points PDF.

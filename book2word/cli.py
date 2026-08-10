@@ -28,6 +28,8 @@ logger = logging.getLogger("book2word")
 
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_TEMPLATE_PATH = os.path.join(_PROJECT_ROOT, "template.docx")
+INPUT_DIR = os.path.join(_PROJECT_ROOT, "input")
+OUTPUT_DIR = os.path.join(_PROJECT_ROOT, "output")
 
 
 def resolve_template_path(template_path: Optional[str]) -> Optional[str]:
@@ -37,6 +39,37 @@ def resolve_template_path(template_path: Optional[str]) -> Optional[str]:
     if os.path.isfile(DEFAULT_TEMPLATE_PATH):
         return DEFAULT_TEMPLATE_PATH
     return None
+
+
+def list_input_pdfs() -> List[str]:
+    """Liste les PDF disponibles dans le dossier input/ (chemins complets, triés par nom)."""
+    if not os.path.isdir(INPUT_DIR):
+        return []
+    names = sorted(f for f in os.listdir(INPUT_DIR) if f.lower().endswith(".pdf"))
+    return [os.path.join(INPUT_DIR, name) for name in names]
+
+
+def resolve_output_path(pdf_path: str, explicit_output: Optional[str] = None) -> str:
+    """Chemin de sortie basé sur le nom du PDF, dans output/ — incrémenté s'il existe déjà.
+
+    Ex. livre.pdf -> output/livre.docx, puis output/livre (2).docx si le premier existe.
+    """
+    if explicit_output:
+        return explicit_output
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    base = os.path.splitext(os.path.basename(pdf_path))[0]
+
+    candidate = os.path.join(OUTPUT_DIR, f"{base}.docx")
+    if not os.path.exists(candidate):
+        return candidate
+
+    n = 2
+    while True:
+        candidate = os.path.join(OUTPUT_DIR, f"{base} ({n}).docx")
+        if not os.path.exists(candidate):
+            return candidate
+        n += 1
 
 
 @dataclass
@@ -227,7 +260,9 @@ Guide rapide :
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("pdf", nargs="?", help="Chemin du PDF source")
-    parser.add_argument("output", nargs="?", help="Chemin du .docx de sortie")
+    parser.add_argument(
+        "output", nargs="?", help="Chemin du .docx de sortie (défaut : output/<nom_du_pdf>.docx)"
+    )
     parser.add_argument("--dpi", type=int, default=300, help="Résolution de rasterisation (défaut : 300)")
     parser.add_argument(
         "--ocr-fallback",
@@ -284,18 +319,20 @@ def main() -> None:
     parser = _build_arg_parser()
     args = parser.parse_args()
 
-    if not args.pdf or not args.output:
-        parser.error("les arguments pdf et output sont requis (ou lancez sans argument pour l'assistant)")
+    if not args.pdf:
+        parser.error("l'argument pdf est requis (ou lancez sans argument pour l'assistant)")
 
     if not os.path.isfile(args.pdf):
         print(f"Erreur : fichier introuvable : {args.pdf}", file=sys.stderr)
         sys.exit(1)
 
+    output_path = resolve_output_path(args.pdf, args.output)
+
     from book2word.ui import run_cli_with_progress
 
     run_cli_with_progress(
         args.pdf,
-        args.output,
+        output_path,
         dpi=args.dpi,
         ocr_fallback=args.ocr_fallback,
         debug=args.debug,

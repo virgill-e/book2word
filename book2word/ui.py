@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 import traceback
+from typing import Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -147,40 +148,48 @@ def run_cli_with_progress(pdf_path, output_path, verbose=False, **kwargs) -> Non
     render_summary(report, console, log_path, debug=kwargs.get("debug", False))
 
 
-def _ask_pdf_path() -> str:
+def _choose_input_pdf() -> Optional[str]:
+    """Affiche les PDF présents dans input/ et laisse l'utilisateur en choisir un par numéro."""
+    from book2word.cli import INPUT_DIR, list_input_pdfs
+
+    pdfs = list_input_pdfs()
+    if not pdfs:
+        console.print(
+            f"[red]Aucun PDF trouvé dans[/red] {INPUT_DIR}\n"
+            f"Déposez-y le(s) fichier(s) à convertir, puis relancez l'outil."
+        )
+        return None
+
+    table = Table(show_header=True, box=None, padding=(0, 2))
+    table.add_column("#", style="bold cyan")
+    table.add_column("Fichier")
+    table.add_column("Taille", justify="right")
+    for i, path in enumerate(pdfs, start=1):
+        size_mb = os.path.getsize(path) / (1024 * 1024)
+        table.add_row(str(i), os.path.basename(path), f"{size_mb:.1f} Mo")
+    console.print(table)
+
     while True:
-        path = Prompt.ask("Chemin du fichier PDF à convertir").strip().strip('"').strip("'")
-        if not os.path.isfile(path):
-            console.print(f"[red]Fichier introuvable :[/red] {path}")
-            continue
-        try:
-            import pymupdf as fitz
-
-            fitz.open(path).close()
-        except Exception:
-            console.print(f"[red]Ce fichier ne semble pas être un PDF valide :[/red] {path}")
-            continue
-        return path
-
-
-def _ask_output_path(pdf_path: str) -> str:
-    default = os.path.splitext(pdf_path)[0] + ".docx"
-    path = Prompt.ask("Nom du document Word à générer", default=default)
-    if not path.lower().endswith(".docx"):
-        path += ".docx"
-    return path
+        choice = IntPrompt.ask("Fichier à convertir (numéro)", default=1)
+        if 1 <= choice <= len(pdfs):
+            return pdfs[choice - 1]
+        console.print(f"[red]Choisissez un numéro entre 1 et {len(pdfs)}.[/red]")
 
 
 def run_wizard() -> None:
     """Assistant interactif : pose quelques questions simples puis lance le traitement."""
+    from book2word.cli import resolve_output_path
+
     console.print(Panel(BANNER, border_style="cyan"))
     console.print(
         "[dim]Répondez aux quelques questions ci-dessous (une valeur par défaut est proposée "
         "entre crochets — appuyez sur Entrée pour l'accepter).[/dim]\n"
     )
 
-    pdf_path = _ask_pdf_path()
-    output_path = _ask_output_path(pdf_path)
+    pdf_path = _choose_input_pdf()
+    if pdf_path is None:
+        return
+    output_path = resolve_output_path(pdf_path)
 
     console.print(
         "\n[bold]Reconnaissance du texte[/bold] : par défaut, l'outil utilise le texte déjà "
