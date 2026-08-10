@@ -49,7 +49,17 @@ class Report:
 
     @property
     def pages_to_check(self) -> List[int]:
-        return [p.page_number for p in self.pages if p.warnings or p.crop_abandoned]
+        """Pages où le nettoyage du texte est visuellement incertain — à ouvrir en priorité."""
+        return [p.page_number for p in self.pages if p.warnings]
+
+    @property
+    def pages_not_cropped(self) -> List[int]:
+        """Pages où le recadrage automatique s'est abstenu (image gardée telle quelle).
+
+        Pas forcément un problème : sur un PDF sans bordure sombre à retirer, l'abstention
+        est même le résultat correct (rien à recadrer).
+        """
+        return [p.page_number for p in self.pages if p.crop_abandoned]
 
 
 def _scale_bbox(bbox: BBox, zoom: float) -> BBox:

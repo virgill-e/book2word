@@ -137,6 +137,62 @@ def preload_ocr(langs: Optional[List[str]] = None) -> None:
     _get_easyocr_reader(langs)
 
 
+def _merge_same_line_fragments(lines: List[dict]) -> List[dict]:
+    """Fusionne les détections EasyOCR qui appartiennent à la même ligne de texte.
+
+    EasyOCR découpe parfois une ligne en plusieurs morceaux (un par mot, ex. "Un" / "prince" /
+    "grenouille !" au lieu d'une seule détection "Un prince grenouille !") — le découpage n'est
+    pas prévisible, ça dépend de l'espacement/rendu. Sans cette fusion, un mot court isolé (ex.
+    "Un") a une bbox quasi carrée et se fait rejeter par `_drop_implausible_lines` comme s'il
+    s'agissait de bruit détecté sur l'illustration, alors que c'est du texte réel tronqué.
+
+    Deux détections fusionnent si elles sont à une hauteur quasi identique (chevauchement
+    vertical significatif) ET proches horizontalement (écart petit par rapport à leur hauteur,
+    donc un espacement de mots normal — pas l'écart, bien plus grand, entre deux colonnes/pages).
+    """
+    n = len(lines)
+    if n < 2:
+        return lines
+
+    parent = list(range(n))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[ri] = rj
+
+    for i in range(n):
+        x0i, y0i, x1i, y1i = lines[i]["bbox"]
+        hi = y1i - y0i
+        for j in range(i + 1, n):
+            x0j, y0j, x1j, y1j = lines[j]["bbox"]
+            hj = y1j - y0j
+            vertical_overlap = min(y1i, y1j) - max(y0i, y0j)
+            horizontal_gap = max(x0i, x0j) - min(x1i, x1j)
+            if vertical_overlap > 0.5 * min(hi, hj) and horizontal_gap < 2 * max(hi, hj):
+                union(i, j)
+
+    groups: dict = {}
+    for i in range(n):
+        groups.setdefault(find(i), []).append(i)
+
+    merged = []
+    for idxs in groups.values():
+        idxs.sort(key=lambda i: lines[i]["bbox"][0])
+        x0 = min(lines[i]["bbox"][0] for i in idxs)
+        y0 = min(lines[i]["bbox"][1] for i in idxs)
+        x1 = max(lines[i]["bbox"][2] for i in idxs)
+        y1 = max(lines[i]["bbox"][3] for i in idxs)
+        text = " ".join(lines[i]["text"] for i in idxs)
+        merged.append({"bbox": [x0, y0, x1, y1], "text": text})
+    return merged
+
+
 def _drop_implausible_lines(lines: List[dict]) -> List[dict]:
     """Écarte les détections EasyOCR qui ne peuvent pas être du texte réel.
 
@@ -194,6 +250,7 @@ def ocr_page_blocks(image_rgb, langs: Optional[List[str]] = None) -> List[TextBl
         ys = [p[1] for p in polygon]
         lines.append({"bbox": [min(xs), min(ys), max(xs), max(ys)], "text": text})
 
+    lines = _merge_same_line_fragments(lines)
     lines = _drop_implausible_lines(lines)
     if not lines:
         return []
