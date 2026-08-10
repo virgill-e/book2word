@@ -1,0 +1,13 @@
+# Environnement Python
+.venv/
+__pycache__/
+*.pyc
+
+# Sorties générées et fichiers de travail (contenu de livres, potentiellement volumineux/protégé)
+*.docx
+*.log
+debug/
+*.pdf
+
+# Système
+.DS_Store
