@@ -17,9 +17,13 @@ Aucune installation de Python ni de terminal requis.
 1. Allez sur la page des [dernières versions](https://github.com/virgill-e/book2word/releases/latest).
 2. Téléchargez `book2word-mac.zip` (Mac) ou `book2word-windows.zip` (Windows).
 3. Dézippez le fichier téléchargé, puis :
-   - **Mac** : ouvrez le dossier dézippé, double-cliquez sur `book2word.app`. macOS affichera
-     probablement un avertissement ("développeur non identifié") la première fois — faites un
-     clic droit sur l'application, choisissez "Ouvrir", puis confirmez.
+   - **Mac** : ouvrez le dossier dézippé, double-cliquez sur `book2word.app`. macOS bloquera
+     probablement l'ouverture la première fois (message "développeur non identifié" ou
+     "l'application book2word ne peut pas être ouverte", parfois avec un code -47). Sur les
+     versions récentes de macOS, un simple clic droit → "Ouvrir" ne suffit plus : allez dans
+     **Réglages Système → Confidentialité et sécurité → Sécurité** (faites défiler vers le
+     bas), repérez "book2word a été bloqué...", cliquez sur **"Ouvrir quand même"**, confirmez
+     avec votre mot de passe/Touch ID, puis retournez double-cliquer sur `book2word.app`.
    - **Windows** : ouvrez le dossier dézippé, double-cliquez sur `book2word.exe`. Windows peut
      afficher "Windows a protégé votre ordinateur" (SmartScreen) — cliquez sur "Informations
      complémentaires" puis "Exécuter quand même".
@@ -163,10 +167,13 @@ regardez ces pages en particulier.
 
 ## 4. Dépannage
 
-**macOS : "book2word ne peut pas être ouvert car il provient d'un développeur non identifié"**
-— l'application n'est pas signée par un compte développeur Apple payant (normal pour un usage
-associatif interne). Faites un clic droit (ou Ctrl-clic) sur `book2word.app` → "Ouvrir" → confirmez
-dans la boîte de dialogue. Ce n'est nécessaire qu'une seule fois.
+**macOS : "book2word ne peut pas être ouvert" (développeur non identifié, ou code -47)** —
+l'application n'est pas signée par un compte développeur Apple payant (normal pour un usage
+associatif interne). Sur les versions récentes de macOS, le clic droit → "Ouvrir" ne suffit
+plus : allez dans **Réglages Système → Confidentialité et sécurité → Sécurité**, faites défiler
+jusqu'à "book2word a été bloqué...", cliquez sur **"Ouvrir quand même"**, confirmez, puis
+retentez le double-clic sur `book2word.app`. Ce n'est nécessaire qu'une seule fois (sur les
+macOS plus anciens, le clic droit → "Ouvrir" fonctionne toujours directement).
 
 **Windows : "Windows a protégé votre ordinateur" (SmartScreen)** — même principe côté Windows.
 Cliquez sur "Informations complémentaires" puis "Exécuter quand même".
