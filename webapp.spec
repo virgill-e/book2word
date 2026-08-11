@@ -5,6 +5,14 @@ Construit avec : pyinstaller webapp.spec --noconfirm
 Sur macOS, produit dist/book2word.app ; sur Windows, dist/book2word/book2word.exe (+ ses
 dépendances dans le même dossier — mode "onedir", plus fiable que "onefile" avec une pile
 aussi lourde que torch/easyocr).
+
+Ne PAS essayer de lancer l'exécutable macOS via un script `.command`/un terminal pour avoir
+une fenêtre "à fermer pour quitter" : testé, ça ne marche pas. `spctl`/Gatekeeper bloque
+silencieusement (sans le dialogue "développeur non identifié" habituel) l'exécution d'un
+binaire quarantiné hors du flux Finder normal d'une .app — contrairement au double-clic sur
+un vrai bundle .app, qui propose bien "clic droit > Ouvrir". D'où le choix de garder le
+bundle .app (le seul chemin macOS fiable) et de gérer l'arrêt "oublié" via l'auto-extinction
+sur inactivité côté serveur (`web.py`) plutôt que via une fenêtre à fermer.
 """
 import sys
 
@@ -53,7 +61,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False,
+    console=True,
 )
 
 coll = COLLECT(

@@ -32,6 +32,39 @@ from book2word.cli import (
 JOBS = {}
 JOBS_LOCK = threading.Lock()
 
+INACTIVITY_TIMEOUT_SECONDS = 20 * 60
+_last_activity = time.time()
+
+
+def _touch_activity() -> None:
+    global _last_activity
+    _last_activity = time.time()
+
+
+def _any_job_running() -> bool:
+    with JOBS_LOCK:
+        return any(job["status"] == "running" for job in JOBS.values())
+
+
+def _watch_inactivity() -> None:
+    """Éteint le serveur si personne n'a rien fait depuis longtemps et qu'aucun job ne tourne.
+
+    Ferme l'onglet en oubliant de cliquer "Quitter" est le comportement attendu de la plupart
+    des utilisateurs non techniques (voir discussion produit) — sur macOS, on ne peut pas
+    fiablement s'appuyer sur une fenêtre de terminal à fermer (le bundle .app, seul moyen
+    fiable de passer Gatekeeper, n'en a pas). Cet auto-arrêt évite qu'un process oublié tourne
+    indéfiniment en arrière-plan, sans dépendre d'une action explicite de l'utilisateur.
+    """
+    while True:
+        time.sleep(60)
+        idle_for = time.time() - _last_activity
+        if idle_for > INACTIVITY_TIMEOUT_SECONDS and not _any_job_running():
+            print(
+                f"book2word : arrêt automatique après {INACTIVITY_TIMEOUT_SECONDS // 60} "
+                "minutes sans activité."
+            )
+            os._exit(0)
+
 
 def reveal_in_file_manager(path: str) -> bool:
     """Ouvre le Finder (macOS) ou l'Explorateur (Windows) avec le fichier sélectionné.
@@ -117,6 +150,10 @@ def create_app() -> Flask:
     )
     app.config["TEMPLATES_AUTO_RELOAD"] = True
     ensure_user_data_dirs()
+
+    @app.before_request
+    def _mark_activity():
+        _touch_activity()
 
     def _index_context(error=None):
         return {
@@ -247,8 +284,15 @@ def run_server(host: str = "127.0.0.1", port: int = 5057, open_browser: bool = T
     if open_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 
-    print(f"book2word est lancé : {url}")
-    print("Laissez cette fenêtre ouverte pendant l'utilisation. Fermez-la pour arrêter l'application.")
+    threading.Thread(target=_watch_inactivity, daemon=True).start()
+
+    idle_minutes = INACTIVITY_TIMEOUT_SECONDS // 60
+    print("=" * 60)
+    print(f" book2word est lancé : {url}")
+    print(' Pour arrêter : cliquez sur "Quitter l\'application" dans la page')
+    print(f" (ou fermez cette fenêtre). Sinon, arrêt automatique après")
+    print(f" {idle_minutes} minutes sans utilisation.")
+    print("=" * 60)
     app.run(host=host, port=port, debug=False, threaded=True)
 
 
