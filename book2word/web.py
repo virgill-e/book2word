@@ -224,10 +224,26 @@ def create_app() -> Flask:
     return app
 
 
+def _already_running(host: str, port: int) -> bool:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.3)
+        return sock.connect_ex((host, port)) == 0
+
+
 def run_server(host: str = "127.0.0.1", port: int = 5057, open_browser: bool = True) -> None:
-    app = create_app()
     url = f"http://{host}:{port}/"
 
+    if _already_running(host, port):
+        # Double-clic accidentel sur une instance déjà lancée : on rouvre juste la page
+        # plutôt que d'échouer sur "port déjà utilisé", qui ne dirait rien à un utilisateur non technique.
+        print(f"book2word tourne déjà : {url}")
+        if open_browser:
+            webbrowser.open(url)
+        return
+
+    app = create_app()
     if open_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
 

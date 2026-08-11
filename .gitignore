@@ -10,5 +10,10 @@ __pycache__/
 debug/
 *.pdf
 
+# Empaquetage (PyInstaller)
+build/
+dist/
+*.zip
+
 # Système
 .DS_Store

@@ -55,9 +55,11 @@ selon la configuration du poste.
 
 `input/`, `output/` et le contenu de `debug/` ne sont jamais versionnés (`.gitignore`) — seuls
 des `.gitkeep` gardent les deux premiers dossiers présents après un clone. `cli.list_input_pdfs`
-et `cli.resolve_output_path` résolvent ces chemins par rapport à la racine du projet
-(`_PROJECT_ROOT`, calculé depuis `__file__`), pas depuis le répertoire courant — l'outil se
-comporte donc pareil quel que soit l'endroit d'où il est lancé.
+et `cli.resolve_output_path` résolvent ces chemins via `_PROJECT_ROOT`, pas depuis le répertoire
+courant — l'outil se comporte donc pareil quel que soit l'endroit d'où il est lancé. Ce chemin
+dépend du mode d'exécution (`cli._is_frozen()`) : à côté du code source en développement, mais
+dans `~/Documents/book2word/` pour une build empaquetée (voir Empaquetage plus bas) — une app
+double-cliquable peut être lancée depuis n'importe où, y compris des dossiers en lecture seule.
 
 Flux par page (dans `cli.process_pdf`) :
 1. `extract_page_text` (PyMuPDF) → blocs de texte natif + bbox, en points PDF.
@@ -131,6 +133,37 @@ préservée pour garder l'outil scriptable sans dépendre du rendu console.
 - Pas de support GPU explicite pour EasyOCR (`gpu=False` en dur dans
   `text_extract._get_easyocr_reader`) — à activer si le public cible a des GPU disponibles et
   que la vitesse devient un problème réel.
+
+## Empaquetage (app de bureau Mac/Windows)
+
+`webapp.spec` (PyInstaller) construit une app de bureau autour de `webapp.py` : mode "onedir"
+(pas "onefile") volontairement — plus fiable et plus rapide au démarrage qu'un onefile avec
+une pile aussi lourde que torch/easyocr (build ~800 Mo). Sur macOS ça produit un vrai bundle
+`.app` (bloc `BUNDLE` du spec, actif seulement si `sys.platform == "darwin"`) ; sur Windows,
+un dossier `book2word/` contenant `book2word.exe` et ses dépendances — c'est ce dossier qu'il
+faut distribuer en entier (zippé), pas juste l'exe seul.
+
+`.github/workflows/build.yml` construit les deux (`macos-latest`/`windows-latest`), zippe
+chaque résultat et republie une release GitHub nommée `latest` (supprimée/recréée à chaque
+run — pas de gestion de versions pour l'instant, une seule release "dernière version" à jour
+sur `main`). Déclenchement : manuel (`workflow_dispatch`, ou `gh workflow run build.yml`) ou
+push d'un tag `v*`.
+
+Points qui ont nécessité un vrai travail (ne pas les défaire par erreur) :
+- `console=False` dans l'EXE du spec (app "fenêtrée", pas de terminal) → `webapp.py` doit donc
+  intercepter toute exception fatale et l'afficher via une boîte de dialogue Tkinter
+  (`_show_fatal_error`), sinon l'app disparaît sans aucune explication pour un utilisateur non
+  technique qui ne verra jamais un traceback dans un terminal qui n'existe pas.
+- `web._already_running` : si le port 127.0.0.1:5057 répond déjà, on rouvre juste le navigateur
+  au lieu de planter sur "port déjà utilisé" — cas fréquent (double-clic accidentel deux fois).
+- Le modèle de langue EasyOCR (~65 Mo) n'est **pas** embarqué dans le build : il se télécharge
+  au premier lancement de l'OCR, comme en mode source. Ne pas présenter ça comme un bug —
+  c'est documenté au README comme un besoin de connexion internet ponctuel, pas une régression.
+- Testé localement avant tout push CI (`pyinstaller webapp.spec --noconfirm` puis lancer
+  `dist/book2word.app/Contents/MacOS/book2word` directement pour voir les logs) : la build
+  fonctionne de bout en bout sur macOS, OCR compris — c'est le point le plus susceptible de
+  casser silencieusement (imports cachés manquants pour torch/easyocr) si on modifie le spec.
+  Toujours refaire ce test après une modification du spec, avant de déclencher la CI.
 
 ## Pour étendre
 

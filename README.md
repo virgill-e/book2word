@@ -10,7 +10,32 @@ Pas besoin de connaissances techniques pour l'utiliser : un assistant vous guide
 
 ## 1. Installation (à faire une seule fois)
 
-### Étape 1 — Installer Python
+### Option A — Télécharger l'application (recommandé)
+
+Aucune installation de Python ni de terminal requis.
+
+1. Allez sur la page des [dernières versions](https://github.com/virgill-e/book2word/releases/latest).
+2. Téléchargez `book2word-mac.zip` (Mac) ou `book2word-windows.zip` (Windows).
+3. Dézippez le fichier téléchargé, puis :
+   - **Mac** : ouvrez le dossier dézippé, double-cliquez sur `book2word.app`. macOS affichera
+     probablement un avertissement ("développeur non identifié") la première fois — faites un
+     clic droit sur l'application, choisissez "Ouvrir", puis confirmez.
+   - **Windows** : ouvrez le dossier dézippé, double-cliquez sur `book2word.exe`. Windows peut
+     afficher "Windows a protégé votre ordinateur" (SmartScreen) — cliquez sur "Informations
+     complémentaires" puis "Exécuter quand même".
+4. Un onglet de navigateur s'ouvre automatiquement. C'est prêt — passez à la section Utilisation.
+
+Vos PDF importés et les documents générés sont rangés automatiquement dans un dossier
+`book2word` créé dans vos **Documents**, indépendamment de l'endroit où vous avez placé
+l'application.
+
+*(Première utilisation de la reconnaissance de texte : une connexion internet est nécessaire
+une seule fois, pour télécharger le modèle de langue (~65 Mo) — ensuite tout fonctionne hors
+ligne.)*
+
+### Option B — Depuis les sources (développeurs / autres systèmes)
+
+#### Étape 1 — Installer Python
 
 Vérifiez si Python est déjà installé en ouvrant un terminal et en tapant :
 
@@ -25,7 +50,7 @@ votre système, puis suivez l'installateur).
 Il faut aussi installer **Tesseract**... non — ce n'est **pas** nécessaire : book2word lit le
 texte des images lui-même (voir plus bas), aucun logiciel externe à installer.
 
-### Étape 2 — Récupérer le projet et installer ses dépendances
+#### Étape 2 — Récupérer le projet et installer ses dépendances
 
 Ouvrez un terminal dans le dossier `book2word` (celui qui contient ce fichier), puis :
 
@@ -53,11 +78,8 @@ l'outil : `source .venv/bin/activate` (ou `.venv\Scripts\activate` sous Windows)
 
 ### Interface web (recommandée)
 
-Lancez :
-
-```bash
-python3 webapp.py
-```
+Application téléchargée (option A) : double-cliquez sur `book2word.app`/`book2word.exe`.
+Depuis les sources (option B) : lancez `python3 webapp.py`.
 
 Une page s'ouvre automatiquement dans votre navigateur (rien n'est envoyé sur internet : tout
 reste sur cet ordinateur). Tout se fait depuis cette page : importer un PDF ou choisir un
@@ -70,7 +92,7 @@ Un bouton "Quitter l'application" en haut à droite arrête proprement le serveu
 Laissez la fenêtre de terminal ouverte pendant l'utilisation (elle affiche l'adresse de la
 page et peut être fermée pour arrêter l'application si besoin).
 
-### Assistant terminal
+### Assistant terminal (installation depuis les sources uniquement)
 
 Si vous préférez le terminal, déposez le(s) PDF à convertir dans le dossier `input/`, puis
 lancez simplement :
@@ -141,8 +163,22 @@ regardez ces pages en particulier.
 
 ## 4. Dépannage
 
-**"Aucun PDF trouvé dans input/"** — placez votre fichier dans le dossier `input/` à la
-racine du projet, puis relancez `python3 book2word.py`.
+**macOS : "book2word ne peut pas être ouvert car il provient d'un développeur non identifié"**
+— l'application n'est pas signée par un compte développeur Apple payant (normal pour un usage
+associatif interne). Faites un clic droit (ou Ctrl-clic) sur `book2word.app` → "Ouvrir" → confirmez
+dans la boîte de dialogue. Ce n'est nécessaire qu'une seule fois.
+
+**Windows : "Windows a protégé votre ordinateur" (SmartScreen)** — même principe côté Windows.
+Cliquez sur "Informations complémentaires" puis "Exécuter quand même".
+
+**L'application téléchargée ne s'ouvre pas du tout / rien ne se passe** — patientez quelques
+secondes au premier lancement (l'application est volumineuse, elle doit se décompresser en
+mémoire). Si rien ne s'ouvre après ~30 secondes, relancez-la ; si le problème persiste, essayez
+l'installation depuis les sources (option B) pour voir le message d'erreur exact dans le terminal.
+
+**"Aucun PDF trouvé dans input/"** — placez votre fichier dans le dossier `input/` (celui créé
+dans **Documents/book2word** pour l'application téléchargée, ou à la racine du projet pour une
+installation depuis les sources), puis relancez.
 
 **Une dépendance manque / erreur `ImportError`** — relancez
 `python3 -m pip install -r requirements.txt` dans le terminal (après avoir activé
