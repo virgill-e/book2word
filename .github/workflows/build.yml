@@ -65,7 +65,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
+          # Pas de --cleanup-tag : ce job ne clone pas le dépôt (pas de .git ici), et
+          # --cleanup-tag échoue dans ce cas, ce qui empêchait la suppression de la release
+          # (l'erreur était avalée par le "|| true" suivant, mais la release restait donc
+          # "gh release create" échouait ensuite sur "existe déjà"). Sans --cleanup-tag,
+          # l'éventuel tag "latest" restant est simplement réutilisé par "release create".
+          gh release delete latest --yes --repo "${{ github.repository }}" || true
           gh release create latest artifacts/*.zip \
             --repo "${{ github.repository }}" \
             --title "book2word — dernière version" \
