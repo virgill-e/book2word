@@ -16,8 +16,9 @@
     <table class="table">
       <tr><th>Pages traitées</th><td id="n-pages"></td></tr>
       <tr><th>Pages à vérifier</th><td id="pages-check"></td></tr>
+      <tr><th>Enregistré dans</th><td id="output-path"></td></tr>
     </table>
-    <a id="download-link" class="btn btn-primary" href="#">Télécharger le document</a>
+    <button type="button" id="reveal-btn" class="btn btn-primary">Afficher dans le dossier</button>
     <a class="btn" href="{{ url_for('index') }}">Retour à l'accueil</a>
   </div>
 
@@ -49,7 +50,10 @@ function poll() {
         const toCheck = job.report.pages_to_check;
         document.getElementById('pages-check').textContent =
           toCheck.length ? toCheck.join(', ') : 'aucune';
-        document.getElementById('download-link').href = `/download/${job.report.output_name}`;
+        document.getElementById('output-path').textContent = job.report.output_path;
+        document.getElementById('reveal-btn').onclick = () => {
+          fetch(`/reveal/${encodeURIComponent(job.report.output_name)}`, {method: 'POST'});
+        };
       } else if (job.status === 'error') {
         document.getElementById('running-block').classList.add('hidden');
         document.getElementById('error-block').classList.remove('hidden');

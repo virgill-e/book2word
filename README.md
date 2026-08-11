@@ -62,8 +62,10 @@ python3 webapp.py
 Une page s'ouvre automatiquement dans votre navigateur (rien n'est envoyé sur internet : tout
 reste sur cet ordinateur). Tout se fait depuis cette page : importer un PDF ou choisir un
 fichier déjà présent dans `input/`, régler les options, lancer la conversion, suivre l'avancée,
-puis télécharger ou supprimer les documents générés (listés depuis `output/`). Un bouton
-"Quitter l'application" en haut à droite arrête proprement le serveur.
+puis retrouver ou supprimer aussi bien les PDF importés que les documents générés. Le bouton
+"Afficher dans le dossier" ouvre directement le Finder (Mac) ou l'Explorateur (Windows) à
+l'emplacement du fichier — son chemin complet est aussi toujours affiché à côté, au cas où.
+Un bouton "Quitter l'application" en haut à droite arrête proprement le serveur.
 
 Laissez la fenêtre de terminal ouverte pendant l'utilisation (elle affiche l'adresse de la
 page et peut être fermée pour arrêter l'application si besoin).

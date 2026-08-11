@@ -6,20 +6,21 @@ Réutilise `cli.process_pdf` tel quel (aucune logique de traitement dupliquée) 
 web est juste une nouvelle façon d'afficher/piloter ce que l'assistant terminal fait déjà.
 """
 import os
+import platform
+import subprocess
 import threading
 import time
 import uuid
 import webbrowser
 from typing import Optional
 
-from flask import Flask, jsonify, redirect, render_template, request, send_file, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from werkzeug.utils import secure_filename
 
 from book2word.cli import (
     DEFAULT_TEMPLATE_PATH,
     INPUT_DIR,
     OUTPUT_DIR,
-    list_input_pdfs,
     process_pdf,
     resolve_output_path,
     resolve_template_path,
@@ -30,23 +31,55 @@ JOBS = {}
 JOBS_LOCK = threading.Lock()
 
 
-def _list_outputs():
-    if not os.path.isdir(OUTPUT_DIR):
+def reveal_in_file_manager(path: str) -> bool:
+    """Ouvre le Finder (macOS) ou l'Explorateur (Windows) avec le fichier sélectionné.
+
+    L'application étant strictement locale (même machine que le navigateur), c'est un vrai
+    processus qui tourne dessus — contrairement à un site web classique, il peut piloter le
+    gestionnaire de fichiers du système. Retourne False si la commande n'existe pas (OS non
+    pris en charge) ; l'appelant doit alors afficher le chemin en repli.
+    """
+    system = platform.system()
+    try:
+        if system == "Darwin":
+            subprocess.run(["open", "-R", path])
+        elif system == "Windows":
+            subprocess.run(["explorer", f"/select,{path}"])
+        elif system == "Linux":
+            subprocess.run(["xdg-open", os.path.dirname(path)])
+        else:
+            return False
+    except OSError:
+        return False
+    return True
+
+
+def _list_dir_entries(directory: str, extension: str):
+    if not os.path.isdir(directory):
         return []
     entries = []
-    for name in sorted(os.listdir(OUTPUT_DIR)):
-        if not name.lower().endswith(".docx"):
+    for name in sorted(os.listdir(directory)):
+        if not name.lower().endswith(extension):
             continue
-        path = os.path.join(OUTPUT_DIR, name)
+        path = os.path.join(directory, name)
         entries.append(
             {
                 "name": name,
+                "path": path,
                 "size_mb": round(os.path.getsize(path) / (1024 * 1024), 1),
                 "mtime": os.path.getmtime(path),
             }
         )
     entries.sort(key=lambda e: e["mtime"], reverse=True)
     return entries
+
+
+def _list_inputs():
+    return _list_dir_entries(INPUT_DIR, ".pdf")
+
+
+def _list_outputs():
+    return _list_dir_entries(OUTPUT_DIR, ".docx")
 
 
 def _run_job(job_id: str, pdf_path: str, output_path: str, options: dict) -> None:
@@ -80,15 +113,18 @@ def create_app() -> Flask:
     os.makedirs(INPUT_DIR, exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+    def _index_context(error=None):
+        return {
+            "error": error,
+            "inputs": _list_inputs(),
+            "outputs": _list_outputs(),
+            "has_template": resolve_template_path(None) is not None,
+            "default_template_name": os.path.basename(DEFAULT_TEMPLATE_PATH),
+        }
+
     @app.route("/")
     def index():
-        return render_template(
-            "index.html",
-            inputs=[os.path.basename(p) for p in list_input_pdfs()],
-            outputs=_list_outputs(),
-            has_template=resolve_template_path(None) is not None,
-            default_template_name=os.path.basename(DEFAULT_TEMPLATE_PATH),
-        )
+        return render_template("index.html", **_index_context())
 
     @app.route("/convert", methods=["POST"])
     def convert():
@@ -104,11 +140,8 @@ def create_app() -> Flask:
             pdf_name = request.form.get("existing_pdf") or None
 
         if not pdf_name:
-            return render_template("index.html", error="Choisissez ou importez un fichier PDF.",
-                                    inputs=[os.path.basename(p) for p in list_input_pdfs()],
-                                    outputs=_list_outputs(),
-                                    has_template=resolve_template_path(None) is not None,
-                                    default_template_name=os.path.basename(DEFAULT_TEMPLATE_PATH)), 400
+            context = _index_context(error="Choisissez ou importez un fichier PDF.")
+            return render_template("index.html", **context), 400
 
         pdf_path = os.path.join(INPUT_DIR, pdf_name)
         output_path = resolve_output_path(pdf_path)
@@ -155,13 +188,14 @@ def create_app() -> Flask:
             return jsonify({"status": "unknown"}), 404
         return jsonify(job)
 
-    @app.route("/download/<path:filename>")
-    def download(filename):
+    @app.route("/reveal/<path:filename>", methods=["POST"])
+    def reveal(filename):
         safe_name = secure_filename(filename)
         path = os.path.join(OUTPUT_DIR, safe_name)
         if not os.path.isfile(path):
-            return "Fichier introuvable", 404
-        return send_file(path, as_attachment=True)
+            return jsonify({"ok": False, "error": "not_found"}), 404
+        opened = reveal_in_file_manager(path)
+        return jsonify({"ok": opened, "path": path})
 
     @app.route("/delete/<kind>/<path:filename>", methods=["POST"])
     def delete(kind, filename):

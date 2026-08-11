@@ -13,8 +13,8 @@
       <label for="existing_pdf">Fichier déjà importé</label>
       <select name="existing_pdf" id="existing_pdf">
         <option value="">— choisir —</option>
-        {% for name in inputs %}
-          <option value="{{ name }}">{{ name }}</option>
+        {% for f in inputs %}
+          <option value="{{ f.name }}">{{ f.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -70,6 +70,33 @@
 </section>
 
 <section class="card">
+  <h2>Fichiers importés</h2>
+  {% if inputs %}
+    <table class="table">
+      <thead>
+        <tr><th>Fichier</th><th>Taille</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for f in inputs %}
+        <tr>
+          <td>{{ f.name }}</td>
+          <td>{{ f.size_mb }} Mo</td>
+          <td>
+            <form action="{{ url_for('delete', kind='input', filename=f.name) }}" method="post"
+                  onsubmit="return confirm('Supprimer {{ f.name }} ? (ne supprime pas les documents déjà générés à partir de ce fichier)');">
+              <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="hint">Aucun PDF importé pour le moment.</p>
+  {% endif %}
+</section>
+
+<section class="card">
   <h2>Résultats</h2>
   {% if outputs %}
     <table class="table">
@@ -79,9 +106,9 @@
       <tbody>
         {% for f in outputs %}
         <tr>
-          <td>{{ f.name }}</td>
+          <td>{{ f.name }}<br><span class="hint">{{ f.path }}</span></td>
           <td>{{ f.size_mb }} Mo</td>
-          <td><a class="btn btn-small" href="{{ url_for('download', filename=f.name) }}">Télécharger</a></td>
+          <td><button type="button" class="btn btn-small" onclick="revealFile('{{ f.name }}')">Afficher dans le dossier</button></td>
           <td>
             <form action="{{ url_for('delete', kind='output', filename=f.name) }}" method="post"
                   onsubmit="return confirm('Supprimer {{ f.name }} ?');">
@@ -96,5 +123,11 @@
     <p class="hint">Aucun document généré pour le moment.</p>
   {% endif %}
 </section>
+
+<script>
+function revealFile(name) {
+  fetch(`/reveal/${encodeURIComponent(name)}`, {method: 'POST'});
+}
+</script>
 
 {% endblock %}

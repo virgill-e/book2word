@@ -42,7 +42,16 @@ accessible depuis le réseau. Un job de conversion tourne dans un `threading.Thr
 et interrogé par le navigateur via `/api/status/<job_id>` (polling JS toutes les secondes,
 pas de websocket). `TEMPLATES_AUTO_RELOAD=True` est activé explicitement : sans ça, Flask ne
 recharge pas les templates quand `debug=False`, ce qui a piégé le développement initial
-(modification de `base.html` invisible sans redémarrage du serveur).
+(modification de `base.html` invisible sans redémarrage du serveur — les changements dans les
+fichiers `.py`, eux, nécessitent toujours un redémarrage).
+
+Pas de bouton "télécharger" : comme le serveur et le navigateur tournent sur la même machine
+(contrainte produit, pas juste choix technique — voir plus haut), `web.reveal_in_file_manager`
+appelle directement `open -R` (macOS) / `explorer /select,` (Windows) / `xdg-open` (Linux) en
+sous-processus pour ouvrir le gestionnaire de fichiers natif sur le fichier généré. Le chemin
+complet est de toute façon toujours affiché en clair dans la page (repli si la commande échoue
+ou sur un OS non couvert) — ne jamais compter uniquement sur la commande native qui peut varier
+selon la configuration du poste.
 
 `input/`, `output/` et le contenu de `debug/` ne sont jamais versionnés (`.gitignore`) — seuls
 des `.gitkeep` gardent les deux premiers dossiers présents après un clone. `cli.list_input_pdfs`
