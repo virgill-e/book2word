@@ -87,10 +87,10 @@ fichier déjà présent dans `input/`, régler les options, lancer la conversion
 puis retrouver ou supprimer aussi bien les PDF importés que les documents générés. Le bouton
 "Afficher dans le dossier" ouvre directement le Finder (Mac) ou l'Explorateur (Windows) à
 l'emplacement du fichier — son chemin complet est aussi toujours affiché à côté, au cas où.
-Un bouton "Quitter l'application" en haut à droite arrête proprement le serveur.
-
-Laissez la fenêtre de terminal ouverte pendant l'utilisation (elle affiche l'adresse de la
-page et peut être fermée pour arrêter l'application si besoin).
+Un bouton "Quitter l'application" en haut à droite arrête proprement le serveur. Si vous
+fermez simplement l'onglet ou la fenêtre sans cliquer sur ce bouton, l'application continue
+de tourner en arrière-plan — elle s'arrête automatiquement toute seule après 20 minutes sans
+utilisation (sauf si une conversion est encore en cours).
 
 ### Assistant terminal (installation depuis les sources uniquement)
 

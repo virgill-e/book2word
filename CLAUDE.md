@@ -150,10 +150,25 @@ sur `main`). Déclenchement : manuel (`workflow_dispatch`, ou `gh workflow run b
 push d'un tag `v*`.
 
 Points qui ont nécessité un vrai travail (ne pas les défaire par erreur) :
-- `console=False` dans l'EXE du spec (app "fenêtrée", pas de terminal) → `webapp.py` doit donc
-  intercepter toute exception fatale et l'afficher via une boîte de dialogue Tkinter
-  (`_show_fatal_error`), sinon l'app disparaît sans aucune explication pour un utilisateur non
-  technique qui ne verra jamais un traceback dans un terminal qui n'existe pas.
+- **Pas de fenêtre de terminal sur macOS, et c'est volontaire.** Un script `.command` qui
+  lance l'exécutable pour donner une fenêtre "à fermer pour quitter" a été essayé puis
+  abandonné : testé avec un vrai flag de quarantaine (`xattr -w com.apple.quarantine`,
+  simulant un téléchargement réel) + `spctl -a -vv` et exécution directe, Gatekeeper bloque
+  silencieusement ce chemin (pas le dialogue habituel "développeur non identifié" qu'on a sur
+  un vrai `.app` ouvert depuis Finder). Le bundle `.app` (bloc `BUNDLE`, actif seulement si
+  `sys.platform == "darwin"`) reste donc le seul chemin macOS fiable, sans console visible.
+- **`_watch_inactivity`** (dans `web.py`) résout le vrai problème à la place d'une fenêtre à
+  fermer : le serveur s'arrête seul après `INACTIVITY_TIMEOUT_SECONDS` (20 min) sans requête
+  HTTP et sans job de conversion en cours — vérifié qu'aucune requête ne réinitialise le
+  minuteur sauf via `before_request`, et que la vérification (toutes les 60s) ignore bien un
+  job actif même si personne n'interagit avec la page pendant qu'il tourne. Bouton "Quitter"
+  toujours disponible en plus, pour un arrêt immédiat et volontaire.
+- `console=True` dans l'EXE du spec ne change rien sur macOS (Finder ne rattache jamais de
+  terminal à un `.app`, cette option ne pilote que Windows/Linux) mais donne une console
+  visible sur Windows — laissé tel quel, ça ne coûte rien et peut aider au diagnostic.
+- `webapp.py` intercepte toute exception fatale au démarrage et l'affiche via une boîte de
+  dialogue Tkinter (`_show_fatal_error`) : utile en particulier sur macOS où il n'y a pas de
+  console visible pour voir un traceback.
 - `web._already_running` : si le port 127.0.0.1:5057 répond déjà, on rouvre juste le navigateur
   au lieu de planter sur "port déjà utilisé" — cas fréquent (double-clic accidentel deux fois).
 - Le modèle de langue EasyOCR (~65 Mo) n'est **pas** embarqué dans le build : il se télécharge
