@@ -21,6 +21,8 @@ from book2word.cli import (
     DEFAULT_TEMPLATE_PATH,
     INPUT_DIR,
     OUTPUT_DIR,
+    bundled_path,
+    ensure_user_data_dirs,
     process_pdf,
     resolve_output_path,
     resolve_template_path,
@@ -108,10 +110,13 @@ def _run_job(job_id: str, pdf_path: str, output_path: str, options: dict) -> Non
 
 
 def create_app() -> Flask:
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        template_folder=bundled_path("book2word", "templates"),
+        static_folder=bundled_path("book2word", "static"),
+    )
     app.config["TEMPLATES_AUTO_RELOAD"] = True
-    os.makedirs(INPUT_DIR, exist_ok=True)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    ensure_user_data_dirs()
 
     def _index_context(error=None):
         return {

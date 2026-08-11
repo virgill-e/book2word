@@ -11,6 +11,7 @@ Lancé sans argument, le script démarre un assistant interactif (voir book2word
 import argparse
 import logging
 import os
+import shutil
 import sys
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
@@ -26,10 +27,45 @@ BBox = tuple
 
 logger = logging.getLogger("book2word")
 
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def _is_frozen() -> bool:
+    """True dans un exécutable empaqueté (PyInstaller), False en exécution depuis les sources."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def bundled_path(*parts: str) -> str:
+    """Chemin vers une ressource embarquée (le modèle par défaut) — PyInstaller l'extrait dans
+    un dossier temporaire (`sys._MEIPASS`) ; en mode source, c'est simplement la racine du dépôt."""
+    base = getattr(sys, "_MEIPASS", None)
+    if base:
+        return os.path.join(base, *parts)
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), *parts)
+
+
+if _is_frozen():
+    # Une app empaquetée peut être lancée depuis n'importe où (Bureau, Téléchargements,
+    # /Applications en lecture seule sur Mac...) : les fichiers de l'utilisateur doivent vivre
+    # dans un dossier stable et inscriptible, pas "à côté" de l'exécutable.
+    _PROJECT_ROOT = os.path.join(os.path.expanduser("~"), "Documents", "book2word")
+else:
+    _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 DEFAULT_TEMPLATE_PATH = os.path.join(_PROJECT_ROOT, "template.docx")
 INPUT_DIR = os.path.join(_PROJECT_ROOT, "input")
 OUTPUT_DIR = os.path.join(_PROJECT_ROOT, "output")
+
+
+def ensure_user_data_dirs() -> None:
+    """Prépare input/ et output/ ; copie le modèle embarqué au premier lancement (app empaquetée).
+
+    Sans effet notable en mode source : ces dossiers/le modèle existent déjà dans le dépôt.
+    """
+    os.makedirs(INPUT_DIR, exist_ok=True)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    if _is_frozen() and not os.path.isfile(DEFAULT_TEMPLATE_PATH):
+        bundled_template = bundled_path("template.docx")
+        if os.path.isfile(bundled_template):
+            shutil.copyfile(bundled_template, DEFAULT_TEMPLATE_PATH)
 
 
 def resolve_template_path(template_path: Optional[str]) -> Optional[str]:
@@ -310,6 +346,8 @@ Guide rapide :
 
 
 def main() -> None:
+    ensure_user_data_dirs()
+
     if len(sys.argv) == 1:
         from book2word.ui import run_wizard
 
