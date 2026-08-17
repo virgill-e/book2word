@@ -1,8 +1,13 @@
 # book2word
 
-Transforme un livre PDF illustré (album, BD, livre jeunesse) en document Word : chaque page
-devient une image nettoyée (le texte imprimé dessus est effacé) suivie du texte de la page,
-prêt à relire ou modifier dans Word.
+Transforme un livre PDF en document Word : chaque page devient une image suivie du texte de
+la page, prêt à relire ou modifier dans Word. Deux types de livres sont pris en charge :
+
+- **Livre avec deux images et texte mélangé** (album illustré) : le texte imprimé sur l'image
+  est effacé, l'image pleine page nettoyée est conservée.
+- **Livre habituel** (mise en page classique) : l'image se trouve sur la moitié droite de la
+  page (elle est conservée, rognée), le texte sur la moitié gauche (il est uniquement extrait,
+  rien de cette moitié n'est gardé dans le document).
 
 Pas besoin de connaissances techniques pour l'utiliser : un assistant vous guide pas à pas.
 
@@ -86,8 +91,9 @@ Application téléchargée (option A) : double-cliquez sur `book2word.app`/`book
 Depuis les sources (option B) : lancez `python3 webapp.py`.
 
 Une page s'ouvre automatiquement dans votre navigateur (rien n'est envoyé sur internet : tout
-reste sur cet ordinateur). Tout se fait depuis cette page : importer un PDF ou choisir un
-fichier déjà présent dans `input/`, régler les options, lancer la conversion, suivre l'avancée,
+reste sur cet ordinateur). Tout se fait depuis cette page : choisir le **type de livre**
+(voir ci-dessus), importer un PDF ou choisir un fichier déjà présent dans `input/`, régler les
+options, lancer la conversion, suivre l'avancée,
 puis retrouver ou supprimer aussi bien les PDF importés que les documents générés. Le bouton
 "Afficher dans le dossier" ouvre directement le Finder (Mac) ou l'Explorateur (Windows) à
 l'emplacement du fichier — son chemin complet est aussi toujours affiché à côté, au cas où.
@@ -105,8 +111,9 @@ lancez simplement :
 python3 book2word.py
 ```
 
-L'outil affiche la liste des PDF trouvés dans `input/` : tapez le numéro de celui à convertir.
-Le document Word est déposé automatiquement dans `output/`, avec le même nom que le PDF (ex.
+L'outil affiche la liste des PDF trouvés dans `input/` : tapez le numéro de celui à convertir,
+puis le type de livre (voir ci-dessus). Le document Word est déposé automatiquement dans
+`output/`, avec le même nom que le PDF (ex.
 `input/mon_livre.pdf` → `output/mon_livre.docx`). Si ce nom existe déjà, un numéro est ajouté
 automatiquement (`mon_livre (2).docx`) — rien n'est jamais écrasé.
 
@@ -129,6 +136,7 @@ Options utiles :
 
 | Option | Effet |
 |---|---|
+| `--book-type standard` | Livre habituel : image sur la moitié droite (conservée), texte sur la moitié gauche (extrait seul). Par défaut (`mixed`) : album illustré, image et texte mélangés sur toute la page. |
 | `--force-ocr` | Relit toutes les pages par reconnaissance d'image plutôt que de faire confiance au texte déjà présent dans le PDF. À utiliser si le texte obtenu est incohérent ou tronqué. |
 | `--ocr-fallback` | Lit par image seulement les pages qui n'ont pas de texte du tout (activé automatiquement en mode assistant). |
 | `--dpi 300` | Qualité des images (plus haut = plus net mais fichier plus lourd et traitement plus long). |
