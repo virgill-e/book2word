@@ -162,6 +162,117 @@ def setup_file_logging(log_path: str) -> None:
     logger.addHandler(handler)
 
 
+def _process_mixed_page(page, img, page_report, zoom, auto_crop, ocr_fallback, ocr_lang, force_ocr, page_num):
+    """Page "mixte" (image et texte imprimé mélangés) : le texte est effacé de l'image,
+    l'image pleine page (rognée si besoin) est conservée."""
+    page_text = extract_page_text(page)
+
+    crop_offset = (0, 0)
+    if auto_crop:
+        cropped, crop_box = autocrop_page(img)
+        if crop_box is not None:
+            img = cropped
+            crop_offset = (crop_box[0], crop_box[1])
+            page_report.crop_applied = True
+        else:
+            page_report.crop_abandoned = True
+            logger.warning(
+                "page %s: recadrage automatique abandonné (zone détectée non fiable, "
+                "ex. main/reflet touchant la page) — image conservée entière.",
+                page_num,
+            )
+
+    if page_text.has_text and not force_ocr:
+        bboxes = [
+            _offset_bbox(_scale_bbox(b.bbox, zoom), crop_offset[0], crop_offset[1])
+            for b in page_text.blocks
+        ]
+        texts = [b.text for b in page_text.blocks]
+    elif ocr_fallback or force_ocr:
+        page_report.used_ocr = True
+        page_report.ocr_reason = "--force-ocr" if force_ocr and page_text.has_text else "pas de couche texte native"
+        ocr_blocks = ocr_page_blocks(img, langs=[ocr_lang])
+        bboxes = [b.bbox for b in ocr_blocks]
+        texts = [b.text for b in ocr_blocks]
+    else:
+        bboxes, texts = [], []
+        page_report.no_text_found = True
+        logger.info(
+            "page %s: pas de couche texte détectée, image conservée telle quelle "
+            "(--ocr-fallback pour tenter une extraction OCR).",
+            page_num,
+        )
+
+    if bboxes:
+        cleaned, warnings = clean_page_image(img, bboxes, page_number=page_num)
+        for w in warnings:
+            logger.warning(w)
+        page_report.warnings = warnings
+    else:
+        cleaned = img
+
+    order = reading_order(bboxes)
+    ordered_texts = [texts[i] for i in order]
+
+    if page_report.used_ocr:
+        logger.info("page %s: texte extrait via OCR (%s).", page_num, page_report.ocr_reason)
+
+    return cleaned, ordered_texts
+
+
+def _process_standard_page(page, img, page_report, auto_crop, ocr_fallback, ocr_lang, force_ocr, page_num):
+    """Page "habituelle" (mise en page classique) : image sur la moitié droite (rognée,
+    conservée telle quelle — rien n'y est effacé), texte sur la moitié gauche (uniquement
+    extrait, rien de cette moitié n'est conservé dans le document généré)."""
+    h, w = img.shape[:2]
+    mid_px = w // 2
+    left_img, right_img = img[:, :mid_px], img[:, mid_px:]
+
+    if auto_crop:
+        cropped, crop_box = autocrop_page(right_img)
+        if crop_box is not None:
+            right_img = cropped
+            page_report.crop_applied = True
+        else:
+            page_report.crop_abandoned = True
+            logger.warning(
+                "page %s: recadrage automatique abandonné sur la moitié droite (zone détectée "
+                "non fiable) — image conservée entière.",
+                page_num,
+            )
+
+    mid_pt = page.rect.width / 2
+    page_text = extract_page_text(page)
+    left_blocks = [b for b in page_text.blocks if (b.bbox[0] + b.bbox[2]) / 2 < mid_pt]
+    has_left_text = any(b.text.strip() for b in left_blocks)
+
+    if has_left_text and not force_ocr:
+        bboxes = [b.bbox for b in left_blocks]
+        texts = [b.text for b in left_blocks]
+    elif ocr_fallback or force_ocr:
+        page_report.used_ocr = True
+        page_report.ocr_reason = "--force-ocr" if force_ocr and has_left_text else "pas de couche texte native"
+        ocr_blocks = ocr_page_blocks(left_img, langs=[ocr_lang])
+        bboxes = [b.bbox for b in ocr_blocks]
+        texts = [b.text for b in ocr_blocks]
+    else:
+        bboxes, texts = [], []
+        page_report.no_text_found = True
+        logger.info(
+            "page %s: pas de couche texte détectée sur la moitié gauche, aucun texte extrait "
+            "(--ocr-fallback pour tenter une extraction OCR).",
+            page_num,
+        )
+
+    order = reading_order(bboxes)
+    ordered_texts = [texts[i] for i in order]
+
+    if page_report.used_ocr:
+        logger.info("page %s: texte extrait via OCR (%s).", page_num, page_report.ocr_reason)
+
+    return right_img, ordered_texts
+
+
 def process_pdf(
     pdf_path: str,
     output_path: str,
@@ -172,10 +283,22 @@ def process_pdf(
     ocr_lang: str = "fr",
     force_ocr: bool = False,
     template_path: Optional[str] = None,
+    book_type: str = "mixed",
     on_page_done: Optional[Callable[[int, int], None]] = None,
 ) -> Report:
     """Traite le PDF page par page. Le détail technique est journalisé (logger "book2word"),
-    seul un rapport structuré est retourné pour l'affichage (laissé à l'appelant)."""
+    seul un rapport structuré est retourné pour l'affichage (laissé à l'appelant).
+
+    `book_type` :
+      - "mixed" (défaut) : album illustré, image et texte imprimé mélangés sur toute la page —
+        le texte est effacé de l'image, l'image pleine page est conservée.
+      - "standard" : mise en page classique, image sur la moitié droite / texte sur la moitié
+        gauche — seule la moitié droite (rognée) est conservée comme image ; le texte de la
+        moitié gauche est uniquement extrait, rien de cette moitié n'est gardé dans l'image.
+    """
+    if book_type not in ("mixed", "standard"):
+        raise ValueError(f"book_type inconnu : {book_type!r} (attendu : 'mixed' ou 'standard')")
+
     template_path = resolve_template_path(template_path)
     document = fitz.open(pdf_path)
     total_pages = document.page_count
@@ -190,71 +313,28 @@ def process_pdf(
     for page in document:
         page_num = page.number + 1
         page_report = PageReport(page_number=page_num)
-
-        page_text = extract_page_text(page)
         img = render_page(page, dpi)
 
-        crop_offset = (0, 0)
-        if auto_crop:
-            cropped, crop_box = autocrop_page(img)
-            if crop_box is not None:
-                img = cropped
-                crop_offset = (crop_box[0], crop_box[1])
-                page_report.crop_applied = True
-            else:
-                page_report.crop_abandoned = True
-                logger.warning(
-                    "page %s: recadrage automatique abandonné (zone détectée non fiable, "
-                    "ex. main/reflet touchant la page) — image conservée entière.",
-                    page_num,
-                )
+        if book_type == "standard":
+            cleaned, ordered_texts = _process_standard_page(
+                page, img, page_report, auto_crop=auto_crop, ocr_fallback=ocr_fallback,
+                ocr_lang=ocr_lang, force_ocr=force_ocr, page_num=page_num,
+            )
+        else:
+            cleaned, ordered_texts = _process_mixed_page(
+                page, img, page_report, zoom=zoom, auto_crop=auto_crop, ocr_fallback=ocr_fallback,
+                ocr_lang=ocr_lang, force_ocr=force_ocr, page_num=page_num,
+            )
 
         if debug:
             cv2.imwrite(
                 os.path.join(debug_dir, f"page_{page_num:03d}_before.png"),
                 cv2.cvtColor(img, cv2.COLOR_RGB2BGR),
             )
-
-        if page_text.has_text and not force_ocr:
-            bboxes = [
-                _offset_bbox(_scale_bbox(b.bbox, zoom), crop_offset[0], crop_offset[1])
-                for b in page_text.blocks
-            ]
-            texts = [b.text for b in page_text.blocks]
-        elif ocr_fallback or force_ocr:
-            page_report.used_ocr = True
-            page_report.ocr_reason = "--force-ocr" if force_ocr and page_text.has_text else "pas de couche texte native"
-            ocr_blocks = ocr_page_blocks(img, langs=[ocr_lang])
-            bboxes = [b.bbox for b in ocr_blocks]
-            texts = [b.text for b in ocr_blocks]
-        else:
-            bboxes, texts = [], []
-            page_report.no_text_found = True
-            logger.info(
-                "page %s: pas de couche texte détectée, image conservée telle quelle "
-                "(--ocr-fallback pour tenter une extraction OCR).",
-                page_num,
-            )
-
-        if bboxes:
-            cleaned, warnings = clean_page_image(img, bboxes, page_number=page_num)
-            for w in warnings:
-                logger.warning(w)
-            page_report.warnings = warnings
-        else:
-            cleaned = img
-
-        if debug:
             cv2.imwrite(
                 os.path.join(debug_dir, f"page_{page_num:03d}_after.png"),
                 cv2.cvtColor(cleaned, cv2.COLOR_RGB2BGR),
             )
-
-        order = reading_order(bboxes)
-        ordered_texts = [texts[i] for i in order]
-
-        if page_report.used_ocr:
-            logger.info("page %s: texte extrait via OCR (%s).", page_num, page_report.ocr_reason)
 
         pages_out.append(PageContent(image=cleaned, texts=ordered_texts, page_number=page_num))
         report.pages.append(page_report)
@@ -298,6 +378,16 @@ Guide rapide :
     parser.add_argument("pdf", nargs="?", help="Chemin du PDF source")
     parser.add_argument(
         "output", nargs="?", help="Chemin du .docx de sortie (défaut : output/<nom_du_pdf>.docx)"
+    )
+    parser.add_argument(
+        "--book-type",
+        choices=["mixed", "standard"],
+        default="mixed",
+        help=(
+            "Type de livre : 'mixed' (défaut, album illustré avec image et texte mélangés sur "
+            "toute la page) ou 'standard' (mise en page classique : image sur la moitié droite, "
+            "texte sur la moitié gauche)"
+        ),
     )
     parser.add_argument("--dpi", type=int, default=300, help="Résolution de rasterisation (défaut : 300)")
     parser.add_argument(
@@ -379,6 +469,7 @@ def main() -> None:
         force_ocr=args.force_ocr,
         verbose=args.verbose,
         template_path=args.template,
+        book_type=args.book_type,
     )
 
 

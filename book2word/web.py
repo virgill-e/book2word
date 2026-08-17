@@ -188,6 +188,10 @@ def create_app() -> Flask:
         pdf_path = os.path.join(INPUT_DIR, pdf_name)
         output_path = resolve_output_path(pdf_path)
 
+        book_type = request.form.get("book_type") or "mixed"
+        if book_type not in ("mixed", "standard"):
+            book_type = "mixed"
+
         options = {
             "dpi": int(request.form.get("dpi") or 300),
             "force_ocr": request.form.get("force_ocr") == "on",
@@ -195,6 +199,7 @@ def create_app() -> Flask:
             "ocr_lang": request.form.get("ocr_lang") or "fr",
             "auto_crop": request.form.get("auto_crop") == "on",
             "debug": request.form.get("debug") == "on",
+            "book_type": book_type,
         }
 
         job_id = uuid.uuid4().hex[:8]

@@ -192,6 +192,14 @@ def run_wizard() -> None:
     output_path = resolve_output_path(pdf_path)
 
     console.print(
+        "\n[bold]Type de livre[/bold] :\n"
+        "  1. Livre avec deux images et texte mélangé (album illustré classique)\n"
+        "  2. Livre habituel (image sur la moitié droite, texte sur la moitié gauche)"
+    )
+    book_type_choice = IntPrompt.ask("Type de livre", default=1)
+    book_type = "standard" if book_type_choice == 2 else "mixed"
+
+    console.print(
         "\n[bold]Reconnaissance du texte[/bold] : par défaut, l'outil utilise le texte déjà "
         "présent dans le PDF quand il en trouve, et lit l'image (OCR) sinon. Si le texte "
         "obtenu est incohérent ou tronqué, forcez la lecture par image sur toutes les pages."
@@ -224,6 +232,7 @@ def run_wizard() -> None:
     recap = Table(show_header=False, box=None)
     recap.add_row("PDF source", pdf_path)
     recap.add_row("Document généré", output_path)
+    recap.add_row("Type de livre", "habituel (image à droite / texte à gauche)" if book_type == "standard" else "deux images et texte mélangé")
     recap.add_row("Reconnaissance de texte", "OCR forcé sur toutes les pages" if force_ocr else "automatique (texte natif puis OCR si besoin)")
     recap.add_row("Résolution", f"{dpi} dpi")
     recap.add_row("Recadrage automatique", "activé" if auto_crop else "désactivé")
@@ -252,6 +261,7 @@ def run_wizard() -> None:
             ocr_lang=ocr_lang,
             debug=debug,
             template_path=template_path,
+            book_type=book_type,
         )
     except KeyboardInterrupt:
         console.print("\n[yellow]Traitement interrompu.[/yellow]")

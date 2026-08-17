@@ -10,6 +10,14 @@
   <form action="{{ url_for('convert') }}" method="post" enctype="multipart/form-data">
 
     <div class="field">
+      <label for="book_type">Type de livre</label>
+      <select name="book_type" id="book_type">
+        <option value="mixed">Livre avec deux images et texte mélangé (album illustré)</option>
+        <option value="standard">Livre habituel (image à droite, texte à gauche)</option>
+      </select>
+    </div>
+
+    <div class="field">
       <label for="existing_pdf">Fichier déjà importé</label>
       <select name="existing_pdf" id="existing_pdf">
         <option value="">— choisir —</option>
