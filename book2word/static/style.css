@@ -133,7 +133,9 @@ body {
 
 .table { width: 100%; border-collapse: collapse; margin: 12px 0; }
 .table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
-.table th { color: var(--muted); font-weight: 600; width: 40%; }
+.table th { color: var(--muted); font-weight: 600; }
+.table td:first-child { word-break: break-word; }
+.table th:not(:first-child), .table td:not(:first-child) { white-space: nowrap; }
 
 .alert { padding: 14px 18px; border-radius: 8px; margin-bottom: 18px; }
 .alert-error { background: var(--error-bg); color: var(--error-text); }

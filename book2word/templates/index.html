@@ -7,7 +7,7 @@
 
 <section class="card">
   <h2>Convertir un livre</h2>
-  <form action="{{ url_for('convert') }}" method="post" enctype="multipart/form-data">
+  <form action="{{ url_for('convert') }}" method="post" enctype="multipart/form-data" autocomplete="off">
 
     <div class="field">
       <label for="book_type">Type de livre</label>
@@ -36,7 +36,7 @@
 
     <div class="field checkbox-field">
       <label>
-        <input type="checkbox" name="force_ocr">
+        <input type="checkbox" name="force_ocr" id="force_ocr">
         Forcer la reconnaissance par image (OCR) sur toutes les pages
       </label>
       <p class="hint">À cocher si le texte obtenu est habituellement incohérent ou tronqué.</p>
@@ -56,11 +56,11 @@
       </div>
 
       <div class="field checkbox-field">
-        <label><input type="checkbox" name="auto_crop" checked> Recadrer automatiquement les bordures sombres</label>
+        <label><input type="checkbox" name="auto_crop" id="auto_crop" checked> Recadrer automatiquement les bordures sombres</label>
       </div>
 
       <div class="field checkbox-field">
-        <label><input type="checkbox" name="debug"> Sauvegarder les images avant/après nettoyage (dossier debug/)</label>
+        <label><input type="checkbox" name="debug" id="debug"> Sauvegarder les images avant/après nettoyage (dossier debug/)</label>
       </div>
 
       <p class="hint">
@@ -136,6 +136,15 @@
 function revealFile(name) {
   fetch(`/reveal/${encodeURIComponent(name)}`, {method: 'POST'});
 }
+
+// Certains navigateurs restaurent l'état des cases à cocher depuis leur cache de navigation
+// (bouton précédent) au lieu de repartir des valeurs par défaut de la page — on les remet
+// explicitement à leur valeur par défaut à chaque affichage de la page pour éviter la surprise.
+window.addEventListener('pageshow', function () {
+  document.getElementById('force_ocr').checked = false;
+  document.getElementById('auto_crop').checked = true;
+  document.getElementById('debug').checked = false;
+});
 </script>
 
 {% endblock %}
