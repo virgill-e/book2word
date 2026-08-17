@@ -109,6 +109,23 @@ def _list_dir_entries(directory: str, extension: str):
     return entries
 
 
+def _safe_path_in(base_dir: str, filename: str) -> Optional[str]:
+    """Reconstruit un chemin sûr dans `base_dir` à partir d'un nom de fichier envoyé par la page.
+
+    `secure_filename()` de Werkzeug est trop agressif pour cet usage : il transforme par ex.
+    "input3 (2).docx" (nommage auto-incrémenté généré par l'appli elle-même, voir
+    `resolve_output_path`) en "input3_2.docx", qui ne correspond à aucun fichier réel — les
+    boutons "Afficher dans le dossier"/"Supprimer" échouaient silencieusement sur ces fichiers.
+    On ne garde que `os.path.basename()` (élimine tout `..`/séparateur de chemin) puis on
+    vérifie que le résultat reste bien dans `base_dir`.
+    """
+    name = os.path.basename(filename)
+    path = os.path.join(base_dir, name)
+    if os.path.commonpath([os.path.abspath(path), os.path.abspath(base_dir)]) != os.path.abspath(base_dir):
+        return None
+    return path
+
+
 def _list_inputs():
     return _list_dir_entries(INPUT_DIR, ".pdf")
 
@@ -237,9 +254,8 @@ def create_app() -> Flask:
 
     @app.route("/reveal/<path:filename>", methods=["POST"])
     def reveal(filename):
-        safe_name = secure_filename(filename)
-        path = os.path.join(OUTPUT_DIR, safe_name)
-        if not os.path.isfile(path):
+        path = _safe_path_in(OUTPUT_DIR, filename)
+        if path is None or not os.path.isfile(path):
             return jsonify({"ok": False, "error": "not_found"}), 404
         opened = reveal_in_file_manager(path)
         return jsonify({"ok": opened, "path": path})
@@ -249,9 +265,8 @@ def create_app() -> Flask:
         base_dir = INPUT_DIR if kind == "input" else OUTPUT_DIR if kind == "output" else None
         if base_dir is None:
             return "Requête invalide", 400
-        safe_name = secure_filename(filename)
-        path = os.path.join(base_dir, safe_name)
-        if os.path.isfile(path):
+        path = _safe_path_in(base_dir, filename)
+        if path and os.path.isfile(path):
             os.remove(path)
             log_path = os.path.splitext(path)[0] + ".log"
             if os.path.isfile(log_path):
