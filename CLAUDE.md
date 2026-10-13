@@ -45,6 +45,24 @@ recharge pas les templates quand `debug=False`, ce qui a piégé le développeme
 (modification de `base.html` invisible sans redémarrage du serveur — les changements dans les
 fichiers `.py`, eux, nécessitent toujours un redémarrage).
 
+Choix d'interface pour un public non technique (ne pas les défaire sans raison) :
+- Langue OCR : liste fermée `cli.OCR_LANGUAGES` (web et assistant), jamais un champ libre — une
+  saisie comme "français" faisait échouer EasyOCR avec un message incompréhensible. La CLI à
+  flags (`--ocr-lang`) reste libre pour les usages avancés. `text_extract` garde un `Reader` par
+  combinaison de langues (le jeu de caractères en dépend).
+- Noms des PDF importés : `web._clean_upload_name`, pas `secure_filename()` de Werkzeug, qui
+  supprimait accents, espaces et apostrophes ("Le Père Noël" → "Le_Pere_Noel"), et le `.docx`
+  généré héritait de ce nom. Seuls chemins, caractères interdits sous Windows/macOS et noms
+  réservés Windows sont neutralisés.
+- Les noms de fichiers ne sont jamais insérés dans du JavaScript inline (`'{{ f.name }}'`) : une
+  apostrophe cassait le bouton "Afficher" et faisait sauter la confirmation de suppression. On
+  passe par `data-name` + `this.dataset.name`.
+- Progression : `process_pdf` appelle `on_page_done(0, total)` avant la première page (souvent
+  la plus longue, chargement OCR inclus) ; `web` en déduit un temps restant estimé
+  (`pages_elapsed` calculé côté serveur dans `/api/status`).
+- "Quitter" interroge `/api/running` au moment du clic et prévient si une conversion tourne ;
+  l'accueil liste les conversions en cours (onglet fermé par erreur → on peut y revenir).
+
 Pas de bouton "télécharger" : comme le serveur et le navigateur tournent sur la même machine
 (contrainte produit, pas juste choix technique — voir plus haut), `web.reveal_in_file_manager`
 appelle directement `open -R` (macOS) / `explorer /select,` (Windows) / `xdg-open` (Linux) en
@@ -54,9 +72,10 @@ ou sur un OS non couvert) — ne jamais compter uniquement sur la commande nativ
 selon la configuration du poste.
 
 `input/`, `output/` et le contenu de `debug/` ne sont jamais versionnés (`.gitignore`) — seuls
-des `.gitkeep` gardent les deux premiers dossiers présents après un clone. `cli.list_input_pdfs`
-et `cli.resolve_output_path` résolvent ces chemins via `_PROJECT_ROOT`, pas depuis le répertoire
-courant — l'outil se comporte donc pareil quel que soit l'endroit d'où il est lancé. Ce chemin
+des `.gitkeep` gardent les deux premiers dossiers présents après un clone. `cli.list_input_pdfs`,
+`cli.resolve_output_path` et `cli.DEBUG_DIR` résolvent ces chemins via `_PROJECT_ROOT`, pas depuis
+le répertoire courant (une app lancée depuis le Finder a `/`, en lecture seule, comme répertoire
+courant : un `debug/` relatif y faisait échouer la conversion) — l'outil se comporte donc pareil quel que soit l'endroit d'où il est lancé. Ce chemin
 dépend du mode d'exécution (`cli._is_frozen()`) : à côté du code source en développement, mais
 dans `~/Documents/book2word/` pour une build empaquetée (voir Empaquetage plus bas) — une app
 double-cliquable peut être lancée depuis n'importe où, y compris des dossiers en lecture seule.

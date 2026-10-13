@@ -5,6 +5,13 @@
   <div class="alert alert-error">{{ error }}</div>
 {% endif %}
 
+{% for job in running_jobs %}
+  <div class="alert alert-info running-job">
+    <span>Conversion en cours : « {{ job.pdf_name }} »</span>
+    <a class="btn btn-small btn-primary" href="{{ url_for('progress', job_id=job.id) }}">Voir la progression</a>
+  </div>
+{% endfor %}
+
 <section class="card">
   <h2>Convertir un livre</h2>
   <form action="{{ url_for('convert') }}" method="post" enctype="multipart/form-data" autocomplete="off">
@@ -51,8 +58,12 @@
       </div>
 
       <div class="field">
-        <label for="ocr_lang">Langue de la reconnaissance de texte</label>
-        <input type="text" name="ocr_lang" id="ocr_lang" value="fr">
+        <label for="ocr_lang">Langue du livre</label>
+        <select name="ocr_lang" id="ocr_lang">
+          {% for code, name in ocr_languages.items() %}
+            <option value="{{ code }}" {% if code == 'fr' %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
       </div>
 
       <div class="field checkbox-field">
@@ -60,7 +71,8 @@
       </div>
 
       <div class="field checkbox-field">
-        <label><input type="checkbox" name="debug" id="debug"> Sauvegarder les images avant/après nettoyage (dossier debug/)</label>
+        <label><input type="checkbox" name="debug" id="debug"> Sauvegarder les images avant/après nettoyage</label>
+        <p class="hint path-hint">Enregistrées dans : {{ debug_dir }}</p>
       </div>
 
       <p class="hint">
@@ -68,7 +80,9 @@
         {% if has_template %}
           <strong>{{ default_template_name }}</strong> (police et mise en page appliquées automatiquement)
         {% else %}
-          aucun (police par défaut) — ajoutez <code>template.docx</code> à la racine du projet pour en utiliser un
+          aucun (police par défaut). Pour en utiliser un, placez un document Word nommé
+          <strong>{{ default_template_name }}</strong> dans le dossier
+          <span class="path-hint">{{ template_dir }}</span>
         {% endif %}
       </p>
     </details>
@@ -88,10 +102,10 @@
         {% for f in inputs %}
         <tr>
           <td>{{ f.name }}</td>
-          <td>{{ f.size_mb }} Mo</td>
-          <td>
-            <form action="{{ url_for('delete', kind='input', filename=f.name) }}" method="post"
-                  onsubmit="return confirm('Supprimer {{ f.name }} ? (ne supprime pas les documents déjà générés à partir de ce fichier)');">
+          <td>{{ f.size_mb | format_mb }}</td>
+          <td class="actions">
+            <form action="{{ url_for('delete', kind='input', filename=f.name) }}" method="post" data-name="{{ f.name }}"
+                  onsubmit="return confirm('Supprimer « ' + this.dataset.name + ' » ?\n\nLes documents Word déjà générés à partir de ce fichier sont conservés.');">
               <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
             </form>
           </td>
@@ -109,24 +123,27 @@
   {% if outputs %}
     <table class="table">
       <thead>
-        <tr><th>Document</th><th>Taille</th><th></th><th></th></tr>
+        <tr><th>Document</th><th>Taille</th><th></th></tr>
       </thead>
       <tbody>
         {% for f in outputs %}
         <tr>
-          <td>{{ f.name }}<br><span class="hint">{{ f.path }}</span></td>
-          <td>{{ f.size_mb }} Mo</td>
-          <td><button type="button" class="btn btn-small" onclick="revealFile('{{ f.name }}')">Afficher dans le dossier</button></td>
-          <td>
-            <form action="{{ url_for('delete', kind='output', filename=f.name) }}" method="post"
-                  onsubmit="return confirm('Supprimer {{ f.name }} ?');">
-              <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
-            </form>
+          <td>{{ f.name }}</td>
+          <td>{{ f.size_mb | format_mb }}</td>
+          <td class="actions">
+            <div class="actions-inner">
+              <button type="button" class="btn btn-small" data-name="{{ f.name }}" onclick="revealFile(this.dataset.name)">Afficher dans le dossier</button>
+              <form action="{{ url_for('delete', kind='output', filename=f.name) }}" method="post" data-name="{{ f.name }}"
+                    onsubmit="return confirm('Supprimer « ' + this.dataset.name + ' » ?');">
+                <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    <p class="hint path-hint">Enregistrés dans : {{ output_dir }}</p>
   {% else %}
     <p class="hint">Aucun document généré pour le moment.</p>
   {% endif %}
@@ -144,6 +161,7 @@ window.addEventListener('pageshow', function () {
   document.getElementById('force_ocr').checked = true;
   document.getElementById('auto_crop').checked = true;
   document.getElementById('debug').checked = false;
+  document.getElementById('ocr_lang').value = 'fr';
 });
 </script>
 

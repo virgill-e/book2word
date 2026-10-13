@@ -34,8 +34,9 @@ body {
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 14px;
+  gap: 6px 14px;
 }
 .logo { font-size: 1.4rem; font-weight: 600; }
 .tagline { opacity: 0.85; font-size: 0.95rem; }
@@ -69,6 +70,7 @@ body {
   margin-top: 0;
   font-size: 1.25rem;
   color: var(--accent-dark);
+  overflow-wrap: anywhere; /* noms de fichiers longs sans espaces */
 }
 
 .field { margin-bottom: 18px; }
@@ -134,12 +136,43 @@ body {
 .table { width: 100%; border-collapse: collapse; margin: 12px 0; }
 .table th, .table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
 .table th { color: var(--muted); font-weight: 600; }
-.table td:first-child { word-break: break-word; }
+.table td:first-child { overflow-wrap: anywhere; }
 .table th:not(:first-child), .table td:not(:first-child) { white-space: nowrap; }
+.table td.actions { white-space: normal; text-align: right; }
+.actions-inner { display: inline-flex; justify-content: flex-end; gap: 8px; }
+.actions-inner .btn { white-space: nowrap; }
+@media (max-width: 680px) {
+  .actions-inner { flex-wrap: wrap; } /* boutons l'un sous l'autre plutôt que hors de la carte */
+}
+.actions-inner form { margin: 0; }
+.table .btn-small { margin-right: 0; }
+
+/* Résumé de conversion : libellés alignés à gauche, valeurs qui passent à la ligne. */
+.summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  margin: 4px 0 22px;
+}
+.summary dt, .summary dd {
+  margin: 0;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.summary dt { color: var(--muted); font-weight: 600; padding-right: 24px; }
+.summary dd { overflow-wrap: anywhere; }
+.summary .file-name { font-weight: 600; }
+.summary .file-dir { display: block; color: var(--muted); font-size: 0.88rem; }
+
+.actions-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.actions-row .btn { margin-right: 0; }
 
 .alert { padding: 14px 18px; border-radius: 8px; margin-bottom: 18px; }
 .alert-error { background: var(--error-bg); color: var(--error-text); }
 .alert-success { background: var(--success-bg); color: var(--success-text); }
+.alert-info { background: #eef3f6; color: #2c4a5a; border: 1px solid #d5e2ea; }
+.running-job { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.running-job span { overflow-wrap: anywhere; }
+.path-hint { overflow-wrap: anywhere; }
 
 .progress-outer {
   background: var(--border);

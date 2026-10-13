@@ -11,8 +11,7 @@
     <div class="topbar-inner">
       <span class="logo">📖 book2word</span>
       <span class="tagline">Livre PDF → document Word</span>
-      <form action="{{ url_for('shutdown') }}" method="post" class="quit-form"
-            onsubmit="return confirm('Fermer book2word ?');">
+      <form action="{{ url_for('shutdown') }}" method="post" class="quit-form" id="quit-form">
         <button type="submit" class="btn-quit">Quitter l'application</button>
       </form>
     </div>
@@ -23,5 +22,23 @@
   <footer class="footer">
     <div class="footer-inner">Application locale — rien n'est envoyé sur internet.</div>
   </footer>
+  <script>
+  // Vérifie au moment du clic (pas au chargement de la page) si une conversion tourne :
+  // quitter l'interromprait et le travail serait perdu.
+  document.getElementById('quit-form').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const form = this;
+    fetch('/api/running')
+      .then(r => r.json())
+      .then(data => data.running.length > 0)
+      .catch(() => false)
+      .then(running => {
+        const message = running
+          ? 'Une conversion est en cours : elle sera interrompue et perdue.\n\nFermer book2word quand même ?'
+          : 'Fermer book2word ?';
+        if (confirm(message)) form.submit();
+      });
+  });
+  </script>
 </body>
 </html>

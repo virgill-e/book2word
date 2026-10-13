@@ -8,18 +8,21 @@ web est juste une nouvelle façon d'afficher/piloter ce que l'assistant terminal
 import os
 import platform
 import subprocess
+import re
 import threading
 import time
+import unicodedata
 import uuid
 import webbrowser
 from typing import Optional
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
-from werkzeug.utils import secure_filename
 
 from book2word.cli import (
+    DEBUG_DIR,
     DEFAULT_TEMPLATE_PATH,
     INPUT_DIR,
+    OCR_LANGUAGES,
     OUTPUT_DIR,
     bundled_path,
     ensure_user_data_dirs,
@@ -43,8 +46,16 @@ def _touch_activity() -> None:
 
 
 def _any_job_running() -> bool:
+    return bool(_running_jobs())
+
+
+def _running_jobs():
     with JOBS_LOCK:
-        return any(job["status"] == "running" for job in JOBS.values())
+        return [
+            {"id": job_id, "pdf_name": job["pdf_name"]}
+            for job_id, job in JOBS.items()
+            if job["status"] == "running"
+        ]
 
 
 def _watch_inactivity() -> None:
@@ -127,6 +138,29 @@ def _safe_path_in(base_dir: str, filename: str) -> Optional[str]:
     return path
 
 
+_FORBIDDEN_NAME_CHARS = re.compile(r'[\x00-\x1f<>:"/\\|?*]')
+_WINDOWS_RESERVED_NAMES = {"CON", "PRN", "AUX", "NUL"} | {f"{p}{i}" for p in ("COM", "LPT") for i in range(1, 10)}
+
+
+def _clean_upload_name(filename: str) -> str:
+    """Nom de fichier sûr pour un PDF importé, en restant lisible.
+
+    `secure_filename()` de Werkzeug transforme "Le Père Noël et l'ours.pdf" en
+    "Le_Pere_Noel_et_lours.pdf" (accents, espaces et apostrophes supprimés), et le document
+    Word généré hérite de ce nom. Ici on ne retire que ce qui est réellement dangereux ou
+    interdit sur Windows/macOS : chemins, caractères de contrôle, `<>:"/\\|?*`, points en tête.
+    """
+    name = unicodedata.normalize("NFC", filename)  # macOS envoie parfois les accents décomposés
+    name = re.split(r"[\\/]", name)[-1]
+    name = _FORBIDDEN_NAME_CHARS.sub("_", name)
+    name = re.sub(r"\s+", " ", name).strip().lstrip(".").strip()
+    stem, ext = os.path.splitext(name)
+    stem = stem[:150].strip() or "document"
+    if stem.upper() in _WINDOWS_RESERVED_NAMES:
+        stem = "_" + stem
+    return stem + (ext.lower() if ext.lower() == ".pdf" else ext + ".pdf")
+
+
 def _list_inputs():
     return _list_dir_entries(INPUT_DIR, ".pdf")
 
@@ -149,6 +183,8 @@ def _run_job(job_id: str, pdf_path: str, output_path: str, options: dict) -> Non
         with JOBS_LOCK:
             JOBS[job_id]["current_page"] = page_num
             JOBS[job_id]["total_pages"] = total_pages
+            if page_num == 0:
+                JOBS[job_id]["pages_started_at"] = time.time()
 
     try:
         log_path = os.path.splitext(output_path)[0] + ".log"
@@ -182,6 +218,7 @@ def create_app() -> Flask:
         static_folder=bundled_path("book2word", "static"),
     )
     app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.add_template_filter(lambda size_mb: f"{size_mb:.1f} Mo".replace(".", ","), "format_mb")
     ensure_user_data_dirs()
 
     @app.before_request
@@ -195,6 +232,11 @@ def create_app() -> Flask:
             "outputs": _list_outputs(),
             "has_template": resolve_template_path(None) is not None,
             "default_template_name": os.path.basename(DEFAULT_TEMPLATE_PATH),
+            "template_dir": os.path.dirname(DEFAULT_TEMPLATE_PATH),
+            "output_dir": OUTPUT_DIR,
+            "debug_dir": DEBUG_DIR,
+            "ocr_languages": OCR_LANGUAGES,
+            "running_jobs": _running_jobs(),
         }
 
     @app.route("/")
@@ -207,12 +249,12 @@ def create_app() -> Flask:
         pdf_name = None
 
         if uploaded and uploaded.filename:
-            pdf_name = secure_filename(uploaded.filename)
-            if not pdf_name.lower().endswith(".pdf"):
-                pdf_name += ".pdf"
+            pdf_name = _clean_upload_name(uploaded.filename)
             uploaded.save(os.path.join(INPUT_DIR, pdf_name))
         else:
             pdf_name = request.form.get("existing_pdf") or None
+            if pdf_name and _safe_path_in(INPUT_DIR, pdf_name) is None:
+                pdf_name = None
 
         if not pdf_name:
             context = _index_context(error="Choisissez ou importez un fichier PDF.")
@@ -229,7 +271,7 @@ def create_app() -> Flask:
             "dpi": int(request.form.get("dpi") or 300),
             "force_ocr": request.form.get("force_ocr") == "on",
             "ocr_fallback": True,
-            "ocr_lang": request.form.get("ocr_lang") or "fr",
+            "ocr_lang": request.form.get("ocr_lang") if request.form.get("ocr_lang") in OCR_LANGUAGES else "fr",
             "auto_crop": request.form.get("auto_crop") == "on",
             "debug": request.form.get("debug") == "on",
             "book_type": book_type,
@@ -241,6 +283,7 @@ def create_app() -> Flask:
                 "status": "running",
                 "stage": "starting",
                 "download": None,
+                "pages_started_at": None,
                 "current_page": 0,
                 "total_pages": 0,
                 "pdf_name": pdf_name,
@@ -268,7 +311,15 @@ def create_app() -> Flask:
             job = JOBS.get(job_id)
         if job is None:
             return jsonify({"status": "unknown"}), 404
-        return jsonify(job)
+        payload = dict(job)
+        # Temps écoulé calculé ici plutôt que dans le navigateur : aucune dépendance à l'horloge du client.
+        started = job.get("pages_started_at")
+        payload["pages_elapsed"] = time.time() - started if started else None
+        return jsonify(payload)
+
+    @app.route("/api/running")
+    def api_running():
+        return jsonify({"running": _running_jobs()})
 
     @app.route("/reveal/<path:filename>", methods=["POST"])
     def reveal(filename):

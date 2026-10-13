@@ -53,6 +53,21 @@ else:
 DEFAULT_TEMPLATE_PATH = os.path.join(_PROJECT_ROOT, "template.docx")
 INPUT_DIR = os.path.join(_PROJECT_ROOT, "input")
 OUTPUT_DIR = os.path.join(_PROJECT_ROOT, "output")
+# Résolu comme input/output : une app lancée depuis le Finder a "/" (lecture seule) comme
+# répertoire courant, un chemin relatif "debug" y faisait échouer la conversion.
+DEBUG_DIR = os.path.join(_PROJECT_ROOT, "debug")
+
+# Langues proposées pour l'OCR (codes EasyOCR) : liste fermée dans l'interface, pour qu'une
+# saisie libre ("français" au lieu de "fr") ne fasse pas échouer la conversion.
+OCR_LANGUAGES = {
+    "fr": "Français",
+    "en": "Anglais",
+    "nl": "Néerlandais",
+    "de": "Allemand",
+    "es": "Espagnol",
+    "it": "Italien",
+    "pt": "Portugais",
+}
 
 
 def ensure_user_data_dirs() -> None:
@@ -302,13 +317,16 @@ def process_pdf(
     template_path = resolve_template_path(template_path)
     document = fitz.open(pdf_path)
     total_pages = document.page_count
-    debug_dir = "debug"
+    debug_dir = DEBUG_DIR
     if debug:
         os.makedirs(debug_dir, exist_ok=True)
 
     report = Report(output_path=output_path, template_path=template_path)
     pages_out = []
     zoom = dpi / 72.0
+
+    if on_page_done:
+        on_page_done(0, total_pages)  # nombre de pages connu avant la première page (souvent la plus longue)
 
     for page in document:
         page_num = page.number + 1

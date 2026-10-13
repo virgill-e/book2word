@@ -167,7 +167,7 @@ Après traitement, vous obtenez dans `output/` :
 - **le fichier `.docx`** : une page = une image nettoyée + le texte en dessous.
 - **un fichier `.log`** (même nom, extension `.log`) : le détail technique de chaque page —
   utile si quelque chose semble anormal, pas nécessaire pour un usage normal.
-- **un dossier `debug/`** (à la racine du projet, uniquement si vous avez activé cette option) :
+- **un dossier `debug/`** (à côté de `output/`, uniquement si vous avez activé cette option) :
   les images avant et après nettoyage, pour vérifier page par page.
 
 Le résumé affiché en fin de traitement liste les **pages à vérifier** : celles où le

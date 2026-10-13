@@ -132,7 +132,7 @@ MODEL_DOWNLOAD_TIMEOUT_SECONDS = 30
 MODEL_DOWNLOAD_ATTEMPTS = 5
 _DOWNLOAD_CHUNK_SIZE = 256 * 1024
 
-_easyocr_reader = None
+_easyocr_readers = {}  # un Reader par combinaison de langues (le jeu de caractères en dépend)
 _easyocr_reader_lock = threading.Lock()
 
 
@@ -226,9 +226,9 @@ def _download_and_unzip_resumable(url, filename, model_storage_directory, verbos
 
 
 def _get_easyocr_reader(langs: List[str], on_download_progress: Optional[DownloadProgress] = None):
-    global _easyocr_reader
+    key = tuple(langs)
     with _easyocr_reader_lock:  # deux conversions simultanées ne doivent pas télécharger en parallèle
-        if _easyocr_reader is None:
+        if key not in _easyocr_readers:
             import warnings
 
             import easyocr
@@ -241,12 +241,12 @@ def _get_easyocr_reader(langs: List[str], on_download_progress: Optional[Downloa
             try:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")  # bruit de dépréciation interne à torch/easyocr
-                    _easyocr_reader = easyocr.Reader(langs, gpu=False, verbose=False)
+                    _easyocr_readers[key] = easyocr.Reader(langs, gpu=False, verbose=False)
             except AssertionError as exc:  # contrôle MD5 d'EasyOCR : fichier corrompu, re-téléchargé au prochain essai
                 raise ModelDownloadError(_DOWNLOAD_FAILED_MESSAGE) from exc
             finally:
                 easyocr_module.download_and_unzip = original_download
-    return _easyocr_reader
+    return _easyocr_readers[key]
 
 
 def preload_ocr(langs: Optional[List[str]] = None, on_download_progress: Optional[DownloadProgress] = None) -> None:

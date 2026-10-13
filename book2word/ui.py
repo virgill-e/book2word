@@ -18,6 +18,12 @@ from rich.table import Table
 console = Console()
 
 
+class ChoicePrompt(Prompt):
+    """Prompt à choix fermé, avec message d'erreur en français."""
+
+    illegal_choice_message = "[prompt.invalid.choice]Merci de choisir l'une des options proposées"
+
+
 class Confirmation(Confirm):
     """Confirmation en français (o/n, "oui"/"non" acceptés) plutôt que y/n."""
 
@@ -215,13 +221,14 @@ def run_wizard() -> None:
     advanced = Confirmation.ask(
         "\nConfigurer les options avancées (résolution, langue, recadrage, débogage) ?", default=False
     )
-    from book2word.cli import resolve_template_path
+    from book2word.cli import DEBUG_DIR, OCR_LANGUAGES, resolve_template_path
 
     if advanced:
         dpi = IntPrompt.ask("Résolution des images en points par pouce (plus haut = plus net mais plus lourd)", default=300)
-        ocr_lang = Prompt.ask("Langue pour la reconnaissance de texte (code EasyOCR)", default="fr")
+        console.print("Langues : " + ", ".join(f"{code} = {name}" for code, name in OCR_LANGUAGES.items()))
+        ocr_lang = ChoicePrompt.ask("Langue du livre", choices=list(OCR_LANGUAGES), default="fr")
         auto_crop = Confirmation.ask("Recadrer automatiquement les bordures sombres des pages photographiées ?", default=True)
-        debug = Confirmation.ask("Sauvegarder les images avant/après nettoyage pour vérification (dossier debug/) ?", default=False)
+        debug = Confirmation.ask(f"Sauvegarder les images avant/après nettoyage pour vérification (dans {DEBUG_DIR}) ?", default=False)
         default_template = resolve_template_path(None) or ""
         template_input = Prompt.ask(
             "Document .docx de base pour la police/mise en page (laisser vide pour aucun)",
