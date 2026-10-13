@@ -96,7 +96,10 @@ Dans **Options avancées** :
 
 - **Résolution des images** : 300 par défaut. Plus haut = images plus nettes mais document
   plus lourd et traitement plus long ; 200 suffit souvent si le fichier Word est trop gros.
-- **Langue du livre** : à changer si le livre n'est pas en français.
+- **Langue du livre** : français (par défaut), néerlandais, allemand ou anglais. Choisissez
+  la langue dans laquelle le livre est écrit : la reconnaissance du texte (accents, lettres
+  spécifiques) en dépend. La première conversion en anglais télécharge un petit complément
+  (environ 15 Mo, connexion internet nécessaire une seule fois).
 - **Recadrer automatiquement les bordures sombres** : retire les bords noirs des pages
   photographiées ou scannées.
 - **Sauvegarder les images avant/après nettoyage** : garde une image de chaque page avant et

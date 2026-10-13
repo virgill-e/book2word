@@ -59,14 +59,11 @@ DEBUG_DIR = os.path.join(_PROJECT_ROOT, "debug")
 
 # Langues proposées pour l'OCR (codes EasyOCR) : liste fermée dans l'interface, pour qu'une
 # saisie libre ("français" au lieu de "fr") ne fasse pas échouer la conversion.
-OCR_LANGUAGES = {
+OCR_LANGUAGES = {  # langues nationales belges + anglais (public de l'ASBL)
     "fr": "Français",
-    "en": "Anglais",
     "nl": "Néerlandais",
     "de": "Allemand",
-    "es": "Espagnol",
-    "it": "Italien",
-    "pt": "Portugais",
+    "en": "Anglais",
 }
 
 
