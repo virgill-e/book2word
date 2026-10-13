@@ -72,23 +72,45 @@
 
       <div class="field checkbox-field">
         <label><input type="checkbox" name="debug" id="debug"> Sauvegarder les images avant/après nettoyage</label>
-        <p class="hint path-hint">Enregistrées dans : {{ debug_dir }}</p>
+        <p class="hint path-hint">
+          Enregistrées dans : {{ debug_dir }} (un sous-dossier par livre, remplacé à chaque nouvelle conversion).
+        </p>
+        {% if debug_size_mb > 0 %}
+          <div class="storage-row debug-storage">
+            <span class="hint">Images de vérification stockées : {{ debug_size_mb | format_mb }}</span>
+            {# Rattaché au formulaire #clear-debug-form placé hors du formulaire de conversion
+               (des <form> imbriqués sont invalides : le bouton lancerait une conversion). #}
+            <button type="submit" form="clear-debug-form" class="btn btn-small btn-danger">Supprimer ces images</button>
+          </div>
+        {% endif %}
       </div>
 
-      <p class="hint">
-        Modèle de mise en page :
+      <div class="field">
+        <label>Modèle de mise en page</label>
         {% if has_template %}
-          <strong>{{ default_template_name }}</strong> (police et mise en page appliquées automatiquement)
+          <p class="hint">
+            <strong>{{ default_template_name }}</strong> : sa police et sa mise en page sont appliquées
+            automatiquement aux documents générés. Pour les changer, modifiez ce fichier dans Word
+            (ou remplacez-le par un autre document du même nom).
+          </p>
+          <p class="hint path-hint">{{ template_path }}</p>
+          <button type="button" class="btn btn-small btn-spaced" onclick="revealTemplate()">Afficher le modèle dans le dossier</button>
         {% else %}
-          aucun (police par défaut). Pour en utiliser un, placez un document Word nommé
-          <strong>{{ default_template_name }}</strong> dans le dossier
-          <span class="path-hint">{{ template_dir }}</span>
+          <p class="hint">
+            Aucun : police par défaut. Pour en utiliser un, placez un document Word nommé
+            <strong>{{ default_template_name }}</strong> dans le dossier ci-dessous.
+          </p>
+          <p class="hint path-hint">{{ template_dir }}</p>
+          <button type="button" class="btn btn-small btn-spaced" onclick="revealTemplate()">Ouvrir le dossier</button>
         {% endif %}
-      </p>
+      </div>
+
     </details>
 
     <button type="submit" class="btn btn-primary">Convertir</button>
   </form>
+  <form id="clear-debug-form" action="{{ url_for('clear', kind='debug') }}" method="post"
+        onsubmit="return confirm('Supprimer toutes les images de vérification ?\n\nLes documents Word ne sont pas concernés.');"></form>
 </section>
 
 <section class="card">
@@ -113,6 +135,18 @@
         {% endfor %}
       </tbody>
     </table>
+    <div class="storage-row">
+      <span class="hint">
+        Copies conservées par l'application (vos fichiers d'origine ne sont pas touchés) :
+        {{ inputs_total_mb | format_mb }} au total.
+      </span>
+      {% if inputs | length > 1 %}
+        <form action="{{ url_for('clear', kind='inputs') }}" method="post"
+              onsubmit="return confirm('Supprimer tous les PDF importés ({{ inputs | length }} fichiers) ?\n\nVos fichiers d\'origine et les documents Word déjà générés sont conservés.');">
+          <button type="submit" class="btn btn-small btn-danger">Supprimer tous les PDF importés</button>
+        </form>
+      {% endif %}
+    </div>
   {% else %}
     <p class="hint">Aucun PDF importé pour le moment.</p>
   {% endif %}
@@ -152,6 +186,10 @@
 <script>
 function revealFile(name) {
   fetch(`/reveal/${encodeURIComponent(name)}`, {method: 'POST'});
+}
+
+function revealTemplate() {
+  fetch('/reveal-template', {method: 'POST'});
 }
 
 // Certains navigateurs restaurent l'état des cases à cocher depuis leur cache de navigation

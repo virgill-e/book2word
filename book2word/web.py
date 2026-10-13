@@ -9,6 +9,7 @@ import os
 import platform
 import subprocess
 import re
+import shutil
 import threading
 import time
 import unicodedata
@@ -161,6 +162,17 @@ def _clean_upload_name(filename: str) -> str:
     return stem + (ext.lower() if ext.lower() == ".pdf" else ext + ".pdf")
 
 
+def _dir_size_mb(directory: str) -> float:
+    total = 0
+    for root, _dirs, files in os.walk(directory):
+        for name in files:
+            try:
+                total += os.path.getsize(os.path.join(root, name))
+            except OSError:
+                pass
+    return round(total / (1024 * 1024), 1)
+
+
 def _list_inputs():
     return _list_dir_entries(INPUT_DIR, ".pdf")
 
@@ -226,12 +238,16 @@ def create_app() -> Flask:
         _touch_activity()
 
     def _index_context(error=None):
+        inputs = _list_inputs()
         return {
             "error": error,
-            "inputs": _list_inputs(),
+            "inputs": inputs,
+            "inputs_total_mb": round(sum(f["size_mb"] for f in inputs), 1),
+            "debug_size_mb": _dir_size_mb(DEBUG_DIR),
             "outputs": _list_outputs(),
             "has_template": resolve_template_path(None) is not None,
             "default_template_name": os.path.basename(DEFAULT_TEMPLATE_PATH),
+            "template_path": DEFAULT_TEMPLATE_PATH,
             "template_dir": os.path.dirname(DEFAULT_TEMPLATE_PATH),
             "output_dir": OUTPUT_DIR,
             "debug_dir": DEBUG_DIR,
@@ -328,6 +344,40 @@ def create_app() -> Flask:
             return jsonify({"ok": False, "error": "not_found"}), 404
         opened = reveal_in_file_manager(path)
         return jsonify({"ok": opened, "path": path})
+
+    @app.route("/reveal-template", methods=["POST"])
+    def reveal_template():
+        # Modèle absent : on ouvre au moins le dossier où le déposer.
+        path = DEFAULT_TEMPLATE_PATH if os.path.isfile(DEFAULT_TEMPLATE_PATH) else os.path.dirname(DEFAULT_TEMPLATE_PATH)
+        return jsonify({"ok": reveal_in_file_manager(path), "path": path})
+
+    @app.route("/clear/<kind>", methods=["POST"])
+    def clear(kind):
+        """Suppression groupée des fichiers jetables (images de vérification, copies des PDF).
+
+        Volontairement absent pour les documents Word générés : c'est le travail de
+        l'utilisateur, souvent sa seule copie — suppression un par un uniquement.
+        """
+        running = _running_jobs()
+        if kind == "debug":
+            if running:
+                return render_template(
+                    "index.html", **_index_context(error="Attendez la fin de la conversion en cours avant de supprimer les images de vérification.")
+                ), 409
+            for entry in os.listdir(DEBUG_DIR) if os.path.isdir(DEBUG_DIR) else []:
+                path = os.path.join(DEBUG_DIR, entry)
+                if os.path.isdir(path):
+                    shutil.rmtree(path, ignore_errors=True)
+                elif not entry.startswith("."):
+                    os.remove(path)
+        elif kind == "inputs":
+            in_use = {job["pdf_name"] for job in running}
+            for f in _list_inputs():
+                if f["name"] not in in_use:
+                    os.remove(f["path"])
+        else:
+            return "Requête invalide", 400
+        return redirect(url_for("index"))
 
     @app.route("/delete/<kind>/<path:filename>", methods=["POST"])
     def delete(kind, filename):

@@ -317,8 +317,11 @@ def process_pdf(
     template_path = resolve_template_path(template_path)
     document = fitz.open(pdf_path)
     total_pages = document.page_count
-    debug_dir = DEBUG_DIR
+    # Un sous-dossier par livre, vidé à chaque nouvelle conversion de ce livre : sans ça, les
+    # images de livres différents (mêmes noms page_001_...) s'écrasaient et se mélangeaient.
+    debug_dir = os.path.join(DEBUG_DIR, os.path.splitext(os.path.basename(pdf_path))[0])
     if debug:
+        shutil.rmtree(debug_dir, ignore_errors=True)
         os.makedirs(debug_dir, exist_ok=True)
 
     report = Report(output_path=output_path, template_path=template_path)

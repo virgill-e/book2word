@@ -173,6 +173,10 @@ body {
 .running-job { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
 .running-job span { overflow-wrap: anywhere; }
 .path-hint { overflow-wrap: anywhere; }
+.btn-spaced { margin-top: 10px; }
+.storage-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.storage-row form { margin: 0; }
+.debug-storage { margin-top: 10px; }
 
 .progress-outer {
   background: var(--border);

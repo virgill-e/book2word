@@ -60,6 +60,13 @@ Choix d'interface pour un public non technique (ne pas les défaire sans raison)
 - Progression : `process_pdf` appelle `on_page_done(0, total)` avant la première page (souvent
   la plus longue, chargement OCR inclus) ; `web` en déduit un temps restant estimé
   (`pages_elapsed` calculé côté serveur dans `/api/status`).
+- Espace disque : `debug/<nom du livre>/` (vidé à chaque nouvelle conversion de ce livre) et
+  boutons de suppression groupée (`/clear/debug`, `/clear/inputs`) avec l'espace occupé affiché.
+  Volontairement **pas** de suppression groupée des `.docx` générés (travail de l'utilisateur,
+  souvent sa seule copie). Le bouton "Supprimer ces images" est dans le `<form>` de conversion :
+  il passe par l'attribut `form="clear-debug-form"` (formulaires imbriqués invalides en HTML).
+- Le chemin de `template.docx` est toujours affiché (avec "Afficher le modèle dans le dossier") :
+  l'app en copie un au premier lancement, c'est donc surtout pour le modifier qu'on le cherche.
 - "Quitter" interroge `/api/running` au moment du clic et prévient si une conversion tourne ;
   l'accueil liste les conversions en cours (onglet fermé par erreur → on peut y revenir).
 

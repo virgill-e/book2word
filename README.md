@@ -168,7 +168,10 @@ Après traitement, vous obtenez dans `output/` :
 - **un fichier `.log`** (même nom, extension `.log`) : le détail technique de chaque page —
   utile si quelque chose semble anormal, pas nécessaire pour un usage normal.
 - **un dossier `debug/`** (à côté de `output/`, uniquement si vous avez activé cette option) :
-  les images avant et après nettoyage, pour vérifier page par page.
+  les images avant et après nettoyage, pour vérifier page par page — un sous-dossier par livre,
+  remplacé à chaque nouvelle conversion. Ces images prennent de la place : l'interface web
+  affiche l'espace occupé et permet de les supprimer (Options avancées), comme les copies des
+  PDF importés (« Supprimer tous les PDF importés »).
 
 Le résumé affiché en fin de traitement liste les **pages à vérifier** : celles où le
 nettoyage automatique ou le recadrage n'est pas certain à 100 %. Ouvrez le `.docx` et
