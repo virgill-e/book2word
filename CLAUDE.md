@@ -55,12 +55,14 @@ Choix d'interface pour un public non technique (ne pas les défaire sans raison)
   supprimait accents, espaces et apostrophes ("Le Père Noël" → "Le_Pere_Noel"), et le `.docx`
   généré héritait de ce nom. Seuls chemins, caractères interdits sous Windows/macOS et noms
   réservés Windows sont neutralisés.
+- Listes de fichiers (`web._list_dir_entries`) : les verrous Word `~$nom.docx` (présents tant
+  qu'un document est ouvert) et les fichiers cachés (`._nom` de macOS) sont exclus.
 - Les noms de fichiers ne sont jamais insérés dans du JavaScript inline (`'{{ f.name }}'`) : une
   apostrophe cassait le bouton "Afficher" et faisait sauter la confirmation de suppression. On
   passe par `data-name` + `this.dataset.name`.
-- Progression : `process_pdf` appelle `on_page_done(0, total)` avant la première page (souvent
-  la plus longue, chargement OCR inclus) ; `web` en déduit un temps restant estimé
-  (`pages_elapsed` calculé côté serveur dans `/api/status`).
+- Progression : `process_pdf` appelle `on_page_done(0, total)` avant la première page, pour
+  afficher "Page 1/N" dès le début. Volontairement **aucune estimation de temps restant** ni de
+  durée par page : elle dépend trop de l'ordinateur (CPU, OCR) et s'est révélée trompeuse.
 - Espace disque : `debug/<nom du livre>/` (vidé à chaque nouvelle conversion de ce livre) et
   boutons de suppression groupée (`/clear/debug`, `/clear/inputs`) avec l'espace occupé affiché.
   Volontairement **pas** de suppression groupée des `.docx` générés (travail de l'utilisateur,

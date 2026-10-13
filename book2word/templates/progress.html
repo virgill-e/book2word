@@ -46,14 +46,6 @@ function toMb(bytes) {
   return Math.round(bytes / (1024 * 1024));
 }
 
-function formatRemaining(seconds) {
-  if (seconds < 60) return "moins d'une minute restante";
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `environ ${minutes} min restantes`;
-  const hours = Math.floor(minutes / 60);
-  return `environ ${hours} h ${String(minutes % 60).padStart(2, '0')} restantes`;
-}
-
 function runningState(job) {
   if (job.stage === 'ocr_download' && job.download) {
     const {done, total} = job.download;
@@ -74,14 +66,11 @@ function runningState(job) {
       return {pct: 0, text: 'Ouverture du PDF…'};
     }
     const pct = Math.round((current / total) * 100);
-    if (current === 0) {
-      return {pct, text: `Page 1/${total} en cours… (la lecture d'une page prend en général 15 à 30 secondes)`};
-    }
     if (current >= total) {
       return {pct, text: 'Création du document Word…'};
     }
-    const remaining = (job.pages_elapsed / current) * (total - current);
-    return {pct, text: `Page ${current + 1}/${total} en cours — ${formatRemaining(remaining)}`};
+    // Pas d'estimation du temps restant : la durée par page dépend trop de l'ordinateur.
+    return {pct, text: `Page ${current + 1}/${total} en cours…`};
   }
   return {pct: 0, text: 'Démarrage…'};
 }

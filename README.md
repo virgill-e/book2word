@@ -52,8 +52,9 @@ téléchargement reprend là où il s'était arrêté. Ensuite, tout fonctionne 
 3. Sous **Importer un nouveau PDF**, choisissez votre fichier — ou, s'il a déjà été importé,
    sélectionnez-le dans **Fichier déjà importé**.
 4. Cliquez sur **Convertir**.
-5. Patientez : la page affiche la page en cours et le temps restant estimé. Comptez environ
-   15 à 30 secondes par page. Si vous fermez l'onglet par erreur, la conversion continue :
+5. Patientez : la page affiche la page en cours et une barre de progression. La durée dépend
+   de l'ordinateur et du livre (plusieurs minutes est normal). Si vous fermez l'onglet par
+   erreur, la conversion continue :
    relancez l'application (double-clic), un bandeau **Conversion en cours** permet de
    reprendre le suivi.
 6. À la fin, cliquez sur **Afficher dans le dossier** pour ouvrir le document Word généré.

@@ -109,6 +109,10 @@ def _list_dir_entries(directory: str, extension: str):
     for name in sorted(os.listdir(directory)):
         if not name.lower().endswith(extension):
             continue
+        # Fichiers techniques à ne jamais montrer : verrou "~$nom.docx" créé par Word tant que le
+        # document est ouvert, fichiers cachés (dont les "._nom" de macOS sur clé USB/réseau).
+        if name.startswith(("~$", ".")):
+            continue
         path = os.path.join(directory, name)
         entries.append(
             {
@@ -195,8 +199,6 @@ def _run_job(job_id: str, pdf_path: str, output_path: str, options: dict) -> Non
         with JOBS_LOCK:
             JOBS[job_id]["current_page"] = page_num
             JOBS[job_id]["total_pages"] = total_pages
-            if page_num == 0:
-                JOBS[job_id]["pages_started_at"] = time.time()
 
     try:
         log_path = os.path.splitext(output_path)[0] + ".log"
@@ -299,7 +301,6 @@ def create_app() -> Flask:
                 "status": "running",
                 "stage": "starting",
                 "download": None,
-                "pages_started_at": None,
                 "current_page": 0,
                 "total_pages": 0,
                 "pdf_name": pdf_name,
@@ -327,11 +328,7 @@ def create_app() -> Flask:
             job = JOBS.get(job_id)
         if job is None:
             return jsonify({"status": "unknown"}), 404
-        payload = dict(job)
-        # Temps écoulé calculé ici plutôt que dans le navigateur : aucune dépendance à l'horloge du client.
-        started = job.get("pages_started_at")
-        payload["pages_elapsed"] = time.time() - started if started else None
-        return jsonify(payload)
+        return jsonify(job)
 
     @app.route("/api/running")
     def api_running():
