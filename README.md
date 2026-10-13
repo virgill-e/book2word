@@ -38,9 +38,11 @@ Vos PDF importés et les documents générés sont rangés automatiquement dans 
 `book2word` créé dans vos **Documents**, indépendamment de l'endroit où vous avez placé
 l'application.
 
-*(Première utilisation de la reconnaissance de texte : une connexion internet est nécessaire
-une seule fois, pour télécharger le modèle de langue (~65 Mo) — ensuite tout fonctionne hors
-ligne.)*
+*(Première conversion : une connexion internet est nécessaire une seule fois, pour télécharger
+le moteur de reconnaissance de texte (~90 Mo, quelques minutes selon la connexion). La page
+affiche la progression. Si l'application est fermée ou la connexion coupée pendant ce
+téléchargement, il suffit de relancer une conversion : il reprend là où il s'était arrêté.
+Ensuite tout fonctionne hors ligne.)*
 
 ### Option B — Depuis les sources (développeurs / autres systèmes)
 
@@ -75,8 +77,9 @@ On utilise `python3 -m pip` plutôt que `pip` tout court : sur certains système
 particulier), la commande `pip` seule n'existe pas telle quelle même quand pip est bien
 installé — `python3 -m pip` fonctionne toujours.
 
-Cette étape télécharge notamment un modèle de reconnaissance de texte (~100 Mo) : elle peut
-prendre quelques minutes selon la connexion. Elle ne se refait pas au lancement suivant.
+Cette étape télécharge notamment PyTorch (plusieurs centaines de Mo) : elle peut prendre
+quelques minutes selon la connexion. Le moteur de reconnaissance de texte (~90 Mo) se
+télécharge ensuite automatiquement à la première conversion, une seule fois.
 
 À chaque nouvelle session de terminal, il faut réactiver l'environnement avant d'utiliser
 l'outil : `source .venv/bin/activate` (ou `.venv\Scripts\activate` sous Windows).

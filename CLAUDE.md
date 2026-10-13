@@ -171,9 +171,20 @@ Points qui ont nécessité un vrai travail (ne pas les défaire par erreur) :
   console visible pour voir un traceback.
 - `web._already_running` : si le port 127.0.0.1:5057 répond déjà, on rouvre juste le navigateur
   au lieu de planter sur "port déjà utilisé" — cas fréquent (double-clic accidentel deux fois).
-- Le modèle de langue EasyOCR (~65 Mo) n'est **pas** embarqué dans le build : il se télécharge
-  au premier lancement de l'OCR, comme en mode source. Ne pas présenter ça comme un bug —
-  c'est documenté au README comme un besoin de connexion internet ponctuel, pas une régression.
+- Les modèles EasyOCR (détecteur CRAFT ~80 Mo + reconnaissance `latin_g2` ~15 Mo) ne sont
+  **pas** embarqués dans le build : ils se téléchargent au premier lancement de l'OCR, comme
+  en mode source. Ne pas présenter ça comme un bug — c'est documenté au README comme un besoin
+  de connexion internet ponctuel, pas une régression.
+- **Téléchargement des modèles EasyOCR remplacé** (`text_extract._download_and_unzip_resumable`,
+  substitué à `easyocr.easyocr.download_and_unzip` le temps de construire le `Reader`) :
+  l'implémentation d'origine (`urlretrieve`) n'a aucun délai d'expiration (connexion figée =
+  app bloquée indéfiniment), repart de zéro après chaque interruption, et n'affiche sa
+  progression que dans un terminal — sur l'app de bureau, l'utilisateur voyait une page figée
+  plusieurs minutes et pensait que l'app avait planté. La version de remplacement : délai
+  d'expiration, nouvelles tentatives, reprise via en-tête `Range` depuis un `<modèle>.zip.part`
+  (y compris après fermeture de l'app), extraction atomique, et rappel de progression affiché
+  par `web.py`/`ui.py`. Elle dépend du nom interne `easyocr.easyocr.download_and_unzip` : à
+  revérifier en cas de montée de version majeure d'EasyOCR.
 - Testé localement avant tout push CI (`pyinstaller webapp.spec --noconfirm` puis lancer
   `dist/book2word.app/Contents/MacOS/book2word` directement pour voir les logs) : la build
   fonctionne de bout en bout sur macOS, OCR compris — c'est le point le plus susceptible de

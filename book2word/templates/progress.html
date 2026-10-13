@@ -9,6 +9,12 @@
     <div class="progress-outer">
       <div class="progress-inner" id="progress-bar" style="width: 0%"></div>
     </div>
+    <p class="hint hidden" id="download-hint">
+      Première utilisation : l'application télécharge son moteur de reconnaissance de texte
+      (environ 90 Mo, une seule fois). Cela peut prendre quelques minutes selon votre connexion
+      internet. Si l'application est fermée entre-temps, le téléchargement reprendra là où il
+      s'était arrêté.
+    </p>
   </div>
 
   <div id="done-block" class="hidden">
@@ -31,17 +37,42 @@
 <script>
 const jobId = {{ job_id | tojson }};
 
+function toMb(bytes) {
+  return Math.round(bytes / (1024 * 1024));
+}
+
+function runningState(job) {
+  if (job.stage === 'ocr_download' && job.download) {
+    const {done, total} = job.download;
+    return {
+      pct: total ? Math.round((done / total) * 100) : 0,
+      text: total
+        ? `Téléchargement du moteur de reconnaissance de texte : ${toMb(done)} / ${toMb(total)} Mo…`
+        : `Téléchargement du moteur de reconnaissance de texte : ${toMb(done)} Mo…`,
+    };
+  }
+  if (job.stage === 'ocr_loading') {
+    return {pct: 0, text: 'Chargement du moteur de reconnaissance de texte…'};
+  }
+  if (job.stage === 'pages') {
+    const total = job.total_pages || 0;
+    const current = job.current_page || 0;
+    return total
+      ? {pct: Math.round((current / total) * 100), text: `Page ${current}/${total}…`}
+      : {pct: 0, text: 'Traitement de la première page…'};
+  }
+  return {pct: 0, text: 'Démarrage…'};
+}
+
 function poll() {
   fetch(`/api/status/${jobId}`)
     .then(r => r.json())
     .then(job => {
       if (job.status === 'running') {
-        const total = job.total_pages || 0;
-        const current = job.current_page || 0;
-        const pct = total ? Math.round((current / total) * 100) : 0;
-        document.getElementById('progress-bar').style.width = pct + '%';
-        document.getElementById('status-text').textContent =
-          total ? `Page ${current}/${total}…` : 'Chargement du moteur de reconnaissance de texte…';
+        const state = runningState(job);
+        document.getElementById('progress-bar').style.width = state.pct + '%';
+        document.getElementById('status-text').textContent = state.text;
+        document.getElementById('download-hint').classList.toggle('hidden', job.stage !== 'ocr_download');
         setTimeout(poll, 1000);
       } else if (job.status === 'done') {
         document.getElementById('running-block').classList.add('hidden');
@@ -59,7 +90,8 @@ function poll() {
         document.getElementById('error-block').classList.remove('hidden');
         document.getElementById('error-text').textContent = job.error;
       }
-    });
+    })
+    .catch(() => setTimeout(poll, 2000));  // erreur réseau passagère : ne jamais figer la page
 }
 poll();
 </script>

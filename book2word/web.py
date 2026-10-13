@@ -28,6 +28,7 @@ from book2word.cli import (
     resolve_template_path,
     setup_file_logging,
 )
+from book2word.text_extract import preload_ocr
 
 JOBS = {}
 JOBS_LOCK = threading.Lock()
@@ -135,6 +136,15 @@ def _list_outputs():
 
 
 def _run_job(job_id: str, pdf_path: str, output_path: str, options: dict) -> None:
+    def set_stage(stage):
+        with JOBS_LOCK:
+            JOBS[job_id]["stage"] = stage
+
+    def on_ocr_download(done_bytes, total_bytes):
+        with JOBS_LOCK:
+            JOBS[job_id]["stage"] = "ocr_download"
+            JOBS[job_id]["download"] = {"done": done_bytes, "total": total_bytes}
+
     def on_page_done(page_num, total_pages):
         with JOBS_LOCK:
             JOBS[job_id]["current_page"] = page_num
@@ -143,6 +153,12 @@ def _run_job(job_id: str, pdf_path: str, output_path: str, options: dict) -> Non
     try:
         log_path = os.path.splitext(output_path)[0] + ".log"
         setup_file_logging(log_path)
+        if options.get("force_ocr") or options.get("ocr_fallback"):
+            # Chargé à part (comme dans ui.py) pour pouvoir afficher le téléchargement des
+            # modèles au premier lancement, sans quoi la page semble figée plusieurs minutes.
+            set_stage("ocr_loading")
+            preload_ocr([options.get("ocr_lang", "fr")], on_download_progress=on_ocr_download)
+        set_stage("pages")
         report = process_pdf(pdf_path, output_path, on_page_done=on_page_done, **options)
         with JOBS_LOCK:
             JOBS[job_id]["status"] = "done"
@@ -223,6 +239,8 @@ def create_app() -> Flask:
         with JOBS_LOCK:
             JOBS[job_id] = {
                 "status": "running",
+                "stage": "starting",
+                "download": None,
                 "current_page": 0,
                 "total_pages": 0,
                 "pdf_name": pdf_name,

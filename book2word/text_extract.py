@@ -1,10 +1,22 @@
 """Extraction du texte et des zones de texte (bounding boxes) d'un PDF via PyMuPDF."""
+import functools
+import http.client
+import logging
+import os
+import shutil
+import threading
+import time
+import urllib.error
+import urllib.request
+import zipfile
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import pymupdf as fitz  # PyMuPDF
 
 BBox = Tuple[float, float, float, float]
+
+logger = logging.getLogger("book2word")
 
 
 @dataclass
@@ -114,27 +126,138 @@ def reading_order(bboxes: List[BBox]) -> List[int]:
     return order
 
 
+DownloadProgress = Callable[[int, int], None]  # (octets reçus, taille totale ou 0 si inconnue)
+
+MODEL_DOWNLOAD_TIMEOUT_SECONDS = 30
+MODEL_DOWNLOAD_ATTEMPTS = 5
+_DOWNLOAD_CHUNK_SIZE = 256 * 1024
+
 _easyocr_reader = None
+_easyocr_reader_lock = threading.Lock()
 
 
-def _get_easyocr_reader(langs: List[str]):
+class ModelDownloadError(RuntimeError):
+    """Échec du téléchargement des modèles OCR, avec un message lisible par un non-technicien."""
+
+
+_DOWNLOAD_FAILED_MESSAGE = (
+    "Impossible de télécharger le moteur de reconnaissance de texte. Une connexion internet "
+    "est nécessaire lors de la première utilisation. Vérifiez la connexion puis relancez la "
+    "conversion : le téléchargement reprendra là où il s'était arrêté."
+)
+
+
+def _download_to_part_file(url: str, part_path: str, on_progress: Optional[DownloadProgress]) -> None:
+    """Télécharge `url` dans `part_path` en reprenant un fichier partiel existant (en-tête Range)."""
+    already = os.path.getsize(part_path) if os.path.isfile(part_path) else 0
+    headers = {"Range": f"bytes={already}-"} if already else {}
+    try:
+        response = urllib.request.urlopen(
+            urllib.request.Request(url, headers=headers), timeout=MODEL_DOWNLOAD_TIMEOUT_SECONDS
+        )
+    except urllib.error.HTTPError as exc:
+        if exc.code == 416 and already:
+            return  # fichier partiel déjà complet (interruption juste avant l'extraction)
+        raise
+
+    with response:
+        if already and response.status == 206:
+            done = already
+            total_str = response.headers.get("Content-Range", "").rpartition("/")[2]  # "bytes 10-99/100"
+            total = int(total_str) if total_str.isdigit() else 0
+            mode = "ab"
+        else:  # serveur sans reprise : on repart de zéro
+            done = 0
+            total = int(response.headers.get("Content-Length") or 0)
+            mode = "wb"
+
+        with open(part_path, mode) as out:
+            while True:
+                chunk = response.read(_DOWNLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+                out.write(chunk)
+                done += len(chunk)
+                if on_progress:
+                    on_progress(done, total)
+
+    if total and done < total:
+        raise OSError(f"téléchargement incomplet ({done}/{total} octets)")
+
+
+def _download_and_unzip_resumable(url, filename, model_storage_directory, verbose=True, on_progress=None):
+    """Remplace `easyocr.utils.download_and_unzip` (même signature).
+
+    La version d'EasyOCR utilise `urlretrieve` sans délai d'expiration (une connexion figée
+    bloque l'application indéfiniment), repart de zéro après chaque interruption et n'affiche
+    sa progression que dans un terminal. Ici : délai d'expiration, nouvelles tentatives,
+    reprise d'un téléchargement interrompu (même après fermeture de l'application) et
+    extraction atomique (jamais de modèle à moitié écrit sous son nom final).
+    """
+    # Fichier temporaire de l'implémentation d'origine, laissé par une interruption.
+    stale_temp = os.path.join(model_storage_directory, "temp.zip")
+    if os.path.isfile(stale_temp):
+        os.remove(stale_temp)
+
+    part_path = os.path.join(model_storage_directory, filename + ".zip.part")
+    for attempt in range(1, MODEL_DOWNLOAD_ATTEMPTS + 1):
+        try:
+            _download_to_part_file(url, part_path, on_progress)
+            break
+        except (OSError, http.client.HTTPException) as exc:  # URLError, timeout, coupure...
+            logger.warning(
+                "téléchargement de %s : tentative %s/%s échouée (%s).", filename, attempt, MODEL_DOWNLOAD_ATTEMPTS, exc
+            )
+            if attempt == MODEL_DOWNLOAD_ATTEMPTS:
+                raise ModelDownloadError(_DOWNLOAD_FAILED_MESSAGE) from exc
+            time.sleep(min(2 ** attempt, 15))
+
+    final_path = os.path.join(model_storage_directory, filename)
+    tmp_path = final_path + ".tmp"
+    try:
+        with zipfile.ZipFile(part_path) as archive, archive.open(filename) as src, open(tmp_path, "wb") as dst:
+            shutil.copyfileobj(src, dst)
+    except (zipfile.BadZipFile, KeyError) as exc:
+        # Archive corrompue : on la jette pour repartir de zéro au prochain essai.
+        os.remove(part_path)
+        raise ModelDownloadError(_DOWNLOAD_FAILED_MESSAGE) from exc
+    os.replace(tmp_path, final_path)
+    os.remove(part_path)
+
+
+def _get_easyocr_reader(langs: List[str], on_download_progress: Optional[DownloadProgress] = None):
     global _easyocr_reader
-    if _easyocr_reader is None:
-        import warnings
+    with _easyocr_reader_lock:  # deux conversions simultanées ne doivent pas télécharger en parallèle
+        if _easyocr_reader is None:
+            import warnings
 
-        import easyocr
+            import easyocr
+            import easyocr.easyocr as easyocr_module
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")  # bruit de dépréciation interne à torch/easyocr
-            _easyocr_reader = easyocr.Reader(langs, gpu=False, verbose=False)
+            original_download = easyocr_module.download_and_unzip
+            easyocr_module.download_and_unzip = functools.partial(
+                _download_and_unzip_resumable, on_progress=on_download_progress
+            )
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")  # bruit de dépréciation interne à torch/easyocr
+                    _easyocr_reader = easyocr.Reader(langs, gpu=False, verbose=False)
+            except AssertionError as exc:  # contrôle MD5 d'EasyOCR : fichier corrompu, re-téléchargé au prochain essai
+                raise ModelDownloadError(_DOWNLOAD_FAILED_MESSAGE) from exc
+            finally:
+                easyocr_module.download_and_unzip = original_download
     return _easyocr_reader
 
 
-def preload_ocr(langs: Optional[List[str]] = None) -> None:
-    """Charge le modèle EasyOCR à l'avance (permet d'afficher un indicateur de chargement dédié)."""
+def preload_ocr(langs: Optional[List[str]] = None, on_download_progress: Optional[DownloadProgress] = None) -> None:
+    """Charge le modèle EasyOCR à l'avance (permet d'afficher un indicateur de chargement dédié).
+
+    Au premier lancement, EasyOCR télécharge ses modèles (~90 Mo) : `on_download_progress`
+    reçoit alors (octets reçus, taille totale) pour chaque fichier téléchargé.
+    """
     if langs is None:
         langs = ["fr"]
-    _get_easyocr_reader(langs)
+    _get_easyocr_reader(langs, on_download_progress)
 
 
 def _merge_same_line_fragments(lines: List[dict]) -> List[dict]:

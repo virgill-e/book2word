@@ -49,8 +49,14 @@ def _run_with_progress(pdf_path, output_path, console_, **kwargs):
     from book2word.text_extract import preload_ocr
 
     if kwargs.get("force_ocr") or kwargs.get("ocr_fallback"):
-        with console_.status("[cyan]Chargement du moteur de reconnaissance de texte (une seule fois)…[/cyan]"):
-            preload_ocr([kwargs.get("ocr_lang", "fr")])
+        with console_.status("[cyan]Chargement du moteur de reconnaissance de texte (une seule fois)…[/cyan]") as status:
+
+            def on_download(done_bytes, total_bytes):
+                mb = 1024 * 1024
+                size = f"{done_bytes / mb:.0f} / {total_bytes / mb:.0f} Mo" if total_bytes else f"{done_bytes / mb:.0f} Mo"
+                status.update(f"[cyan]Téléchargement du moteur de reconnaissance de texte (première fois) : {size}…[/cyan]")
+
+            preload_ocr([kwargs.get("ocr_lang", "fr")], on_download_progress=on_download)
 
     with Progress(
         TextColumn("[progress.description]{task.description}"),
