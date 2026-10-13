@@ -28,6 +28,10 @@ if __import__("os").path.isfile("template.docx"):
 binaries = []
 hiddenimports = []
 
+# Icône de l'app (générée par assets/make_icon.py) : .icns pour le bundle macOS, .ico pour
+# l'exe Windows.
+ICON = "assets/icon.icns" if sys.platform == "darwin" else "assets/icon.ico"
+
 for pkg in ("easyocr", "torch", "torchvision", "cv2", "pymupdf", "docx", "flask", "rich"):
     try:
         pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
@@ -62,6 +66,7 @@ exe = EXE(
     strip=False,
     upx=False,
     console=True,
+    icon=ICON,
 )
 
 coll = COLLECT(
@@ -77,6 +82,7 @@ if sys.platform == "darwin":
     app = BUNDLE(
         coll,
         name="book2word.app",
+        icon=ICON,
         bundle_identifier="be.book2word.app",
         info_plist={"NSHighResolutionCapable": True},
     )

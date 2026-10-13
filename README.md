@@ -9,243 +9,160 @@ la page, prêt à relire ou modifier dans Word. Deux types de livres sont pris e
   page (elle est conservée, rognée), le texte sur la moitié gauche (il est uniquement extrait,
   rien de cette moitié n'est gardé dans le document).
 
-Pas besoin de connaissances techniques pour l'utiliser : un assistant vous guide pas à pas.
+Tout se fait depuis une page dans votre navigateur, sans connaissances techniques. Rien n'est
+envoyé sur internet : tout reste sur votre ordinateur.
 
 ---
 
-## 1. Installation (à faire une seule fois)
-
-### Option A — Télécharger l'application (recommandé)
-
-Aucune installation de Python ni de terminal requis.
+## 1. Installation (une seule fois)
 
 1. Allez sur la page des [dernières versions](https://github.com/virgill-e/book2word/releases/latest).
 2. Téléchargez `book2word-mac.zip` (Mac) ou `book2word-windows.zip` (Windows).
-3. Dézippez le fichier téléchargé, puis :
-   - **Mac** : ouvrez le dossier dézippé, double-cliquez sur `book2word.app`. macOS bloquera
-     probablement l'ouverture la première fois (message "développeur non identifié" ou
-     "l'application book2word ne peut pas être ouverte", parfois avec un code -47). Sur les
-     versions récentes de macOS, un simple clic droit → "Ouvrir" ne suffit plus : allez dans
-     **Réglages Système → Confidentialité et sécurité → Sécurité** (faites défiler vers le
-     bas), repérez "book2word a été bloqué...", cliquez sur **"Ouvrir quand même"**, confirmez
-     avec votre mot de passe/Touch ID, puis retournez double-cliquer sur `book2word.app`.
-   - **Windows** : ouvrez le dossier dézippé, double-cliquez sur `book2word.exe`. Windows peut
-     afficher "Windows a protégé votre ordinateur" (SmartScreen) — cliquez sur "Informations
-     complémentaires" puis "Exécuter quand même".
-4. Un onglet de navigateur s'ouvre automatiquement. C'est prêt — passez à la section Utilisation.
+3. Dézippez le fichier téléchargé (double-clic dessus), puis :
+   - **Mac** : double-cliquez sur `book2word.app`. La première fois, macOS bloque l'ouverture
+     (« développeur non identifié » ou « book2word ne peut pas être ouvert »). Allez alors dans
+     **Réglages Système → Confidentialité et sécurité**, faites défiler vers le bas jusqu'à
+     « book2word a été bloqué… », cliquez sur **Ouvrir quand même**, confirmez avec votre mot
+     de passe ou Touch ID, puis double-cliquez à nouveau sur `book2word.app`.
+     Conseil : glissez `book2word.app` dans votre dossier **Applications** pour le retrouver
+     facilement.
+   - **Windows** : ouvrez le dossier dézippé et double-cliquez sur `book2word.exe`. Si Windows
+     affiche « Windows a protégé votre ordinateur », cliquez sur **Informations
+     complémentaires** puis **Exécuter quand même**. Gardez bien tout le dossier : l'application
+     ne fonctionne pas si on copie le fichier `.exe` seul ailleurs.
+4. Une page s'ouvre dans votre navigateur : c'est prêt.
 
-Vos PDF importés et les documents générés sont rangés automatiquement dans un dossier
-`book2word` créé dans vos **Documents**, indépendamment de l'endroit où vous avez placé
-l'application.
+Ces avertissements n'apparaissent qu'au premier lancement. Ils sont normaux : l'application
+n'est pas enregistrée auprès d'Apple ou de Microsoft (démarche payante, inutile pour un usage
+associatif).
 
-*(Première conversion : une connexion internet est nécessaire une seule fois, pour télécharger
-le moteur de reconnaissance de texte (~90 Mo, quelques minutes selon la connexion). La page
-affiche la progression. Si l'application est fermée ou la connexion coupée pendant ce
-téléchargement, il suffit de relancer une conversion : il reprend là où il s'était arrêté.
-Ensuite tout fonctionne hors ligne.)*
-
-### Option B — Depuis les sources (développeurs / autres systèmes)
-
-#### Étape 1 — Installer Python
-
-Vérifiez si Python est déjà installé en ouvrant un terminal et en tapant :
-
-```bash
-python3 --version
-```
-
-Si une version 3.9 ou plus s'affiche, c'est bon, passez à l'étape 2. Sinon, installez Python
-depuis [python.org/downloads](https://www.python.org/downloads/) (choisissez la version pour
-votre système, puis suivez l'installateur).
-
-Il faut aussi installer **Tesseract**... non — ce n'est **pas** nécessaire : book2word lit le
-texte des images lui-même (voir plus bas), aucun logiciel externe à installer.
-
-#### Étape 2 — Récupérer le projet et installer ses dépendances
-
-Ouvrez un terminal dans le dossier `book2word` (celui qui contient ce fichier), puis :
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-```
-
-Sous Windows (invite de commandes) remplacez la 2ᵉ ligne par : `.venv\Scripts\activate`
-
-On utilise `python3 -m pip` plutôt que `pip` tout court : sur certains systèmes (macOS en
-particulier), la commande `pip` seule n'existe pas telle quelle même quand pip est bien
-installé — `python3 -m pip` fonctionne toujours.
-
-Cette étape télécharge notamment PyTorch (plusieurs centaines de Mo) : elle peut prendre
-quelques minutes selon la connexion. Le moteur de reconnaissance de texte (~90 Mo) se
-télécharge ensuite automatiquement à la première conversion, une seule fois.
-
-À chaque nouvelle session de terminal, il faut réactiver l'environnement avant d'utiliser
-l'outil : `source .venv/bin/activate` (ou `.venv\Scripts\activate` sous Windows).
+**Première conversion :** l'application télécharge une seule fois son moteur de
+reconnaissance de texte (environ 90 Mo, quelques minutes selon la connexion). Une connexion
+internet est donc nécessaire ce jour-là ; la page affiche la progression. Si l'application est
+fermée ou la connexion coupée entre-temps, relancez simplement une conversion : le
+téléchargement reprend là où il s'était arrêté. Ensuite, tout fonctionne hors ligne.
 
 ---
 
-## 2. Utilisation
+## 2. Convertir un livre
 
-### Interface web (recommandée)
+1. Lancez l'application (double-clic sur `book2word.app` ou `book2word.exe`). La page
+   s'ouvre dans votre navigateur.
+2. Choisissez le **type de livre** (voir plus haut).
+3. Sous **Importer un nouveau PDF**, choisissez votre fichier — ou, s'il a déjà été importé,
+   sélectionnez-le dans **Fichier déjà importé**.
+4. Cliquez sur **Convertir**.
+5. Patientez : la page affiche la page en cours et le temps restant estimé. Comptez environ
+   15 à 30 secondes par page. Si vous fermez l'onglet par erreur, la conversion continue :
+   relancez l'application (double-clic), un bandeau **Conversion en cours** permet de
+   reprendre le suivi.
+6. À la fin, cliquez sur **Afficher dans le dossier** pour ouvrir le document Word généré.
 
-Application téléchargée (option A) : double-cliquez sur `book2word.app`/`book2word.exe`.
-Depuis les sources (option B) : lancez `python3 webapp.py`.
+Vos fichiers sont rangés dans le dossier **Documents/book2word** :
 
-Une page s'ouvre automatiquement dans votre navigateur (rien n'est envoyé sur internet : tout
-reste sur cet ordinateur). Tout se fait depuis cette page : choisir le **type de livre**
-(voir ci-dessus), importer un PDF ou choisir un fichier déjà présent dans `input/`, régler les
-options, lancer la conversion, suivre l'avancée,
-puis retrouver ou supprimer aussi bien les PDF importés que les documents générés. Le bouton
-"Afficher dans le dossier" ouvre directement le Finder (Mac) ou l'Explorateur (Windows) à
-l'emplacement du fichier — son chemin complet est aussi toujours affiché à côté, au cas où.
-Un bouton "Quitter l'application" en haut à droite arrête proprement le serveur. Si vous
-fermez simplement l'onglet ou la fenêtre sans cliquer sur ce bouton, l'application continue
-de tourner en arrière-plan — elle s'arrête automatiquement toute seule après 20 minutes sans
-utilisation (sauf si une conversion est encore en cours).
+- `input` : les copies des PDF importés (vos fichiers d'origine ne sont jamais modifiés) ;
+- `output` : les documents Word générés, nommés comme le PDF. Si ce nom existe déjà, un
+  numéro est ajouté (`mon livre (2).docx`) : rien n'est jamais écrasé.
 
-### Assistant terminal (installation depuis les sources uniquement)
+### Quitter l'application
 
-Si vous préférez le terminal, déposez le(s) PDF à convertir dans le dossier `input/`, puis
-lancez simplement :
+Cliquez sur **Quitter l'application** en haut à droite. Si vous fermez simplement l'onglet,
+l'application s'arrête toute seule après 20 minutes sans utilisation (jamais pendant une
+conversion).
 
-```bash
-python3 book2word.py
-```
+### Faire de la place
 
-L'outil affiche la liste des PDF trouvés dans `input/` : tapez le numéro de celui à convertir,
-puis le type de livre (voir ci-dessus). Le document Word est déposé automatiquement dans
-`output/`, avec le même nom que le PDF (ex.
-`input/mon_livre.pdf` → `output/mon_livre.docx`). Si ce nom existe déjà, un numéro est ajouté
-automatiquement (`mon_livre (2).docx`) — rien n'est jamais écrasé.
+Les PDF importés et les images de vérification prennent de la place avec le temps. Depuis la
+page d'accueil :
 
-Le reste des questions (une valeur par défaut est proposée entre parenthèses — appuyez sur
-Entrée pour l'accepter) porte sur la reconnaissance du texte et les options avancées. Une
-barre de progression s'affiche pendant le traitement, puis un résumé indique où se trouve
-le résultat.
+- **Supprimer tous les PDF importés** (sous la liste « Fichiers importés ») : supprime les
+  copies gardées par l'application, pas vos fichiers d'origine ni les documents Word.
+- **Supprimer ces images** (dans « Options avancées », si vous avez enregistré des images de
+  vérification).
 
-### Mode ligne de commande (utilisateurs avancés / scripts)
-
-```bash
-python3 book2word.py input/mon_livre.pdf
-python3 book2word.py mon_livre.pdf resultat.docx   # chemin de sortie explicite (optionnel)
-```
-
-Sans deuxième argument, le fichier est aussi déposé dans `output/` en suivant la même règle
-de nommage qu'en mode assistant.
-
-Options utiles :
-
-| Option | Effet |
-|---|---|
-| `--book-type standard` | Livre habituel : image sur la moitié droite (conservée), texte sur la moitié gauche (extrait seul). Par défaut (`mixed`) : album illustré, image et texte mélangés sur toute la page. |
-| `--force-ocr` | Relit toutes les pages par reconnaissance d'image plutôt que de faire confiance au texte déjà présent dans le PDF. À utiliser si le texte obtenu est incohérent ou tronqué. |
-| `--ocr-fallback` | Lit par image seulement les pages qui n'ont pas de texte du tout (activé automatiquement en mode assistant). |
-| `--dpi 300` | Qualité des images (plus haut = plus net mais fichier plus lourd et traitement plus long). |
-| `--no-crop` | Désactive le recadrage automatique des bordures sombres (pages photographiées). |
-| `--debug` | Sauvegarde les images avant/après nettoyage dans un dossier `debug/`, pour vérifier visuellement. |
-| `--verbose` | Affiche le détail technique dans le terminal (par défaut, il va uniquement dans un fichier `.log`). |
-| `--template modele.docx` | Document Word de base pour la police et la mise en page (voir ci-dessous). |
-
-Voir toutes les options : `python3 book2word.py --help`
-
-### Personnaliser la police du document généré
-
-Si un fichier `template.docx` se trouve à la racine du projet, il est utilisé automatiquement
-comme base : le texte généré reprend sa police et sa mise en page (marges, taille de page)
-au lieu du style par défaut. Pour changer de police, remplacez ce fichier par un `.docx` dont
-le style *Normal* a la police souhaitée (dans Word : clic droit sur "Normal" dans le panneau
-des styles → Modifier → choisir la police), ou indiquez un autre fichier avec `--template`.
+Les documents Word se suppriment un par un, volontairement, pour éviter de perdre un travail
+par erreur.
 
 ---
 
-## 3. Comprendre le résultat
+## 3. Options
 
-Après traitement, vous obtenez dans `output/` :
+**Forcer la reconnaissance par image (OCR) sur toutes les pages** (cochée par défaut) :
+l'application lit le texte directement sur l'image de chaque page. Vous pouvez la décocher si
+le PDF contient déjà un texte fiable (PDF créé par ordinateur, pas un scan) : le traitement
+est alors beaucoup plus rapide.
 
-- **le fichier `.docx`** : une page = une image nettoyée + le texte en dessous.
-- **un fichier `.log`** (même nom, extension `.log`) : le détail technique de chaque page —
-  utile si quelque chose semble anormal, pas nécessaire pour un usage normal.
-- **un dossier `debug/`** (à côté de `output/`, uniquement si vous avez activé cette option) :
-  les images avant et après nettoyage, pour vérifier page par page — un sous-dossier par livre,
-  remplacé à chaque nouvelle conversion. Ces images prennent de la place : l'interface web
-  affiche l'espace occupé et permet de les supprimer (Options avancées), comme les copies des
-  PDF importés (« Supprimer tous les PDF importés »).
+Dans **Options avancées** :
 
-Le résumé affiché en fin de traitement liste les **pages à vérifier** : celles où le
-nettoyage automatique ou le recadrage n'est pas certain à 100 %. Ouvrez le `.docx` et
-regardez ces pages en particulier.
-
----
-
-## 4. Dépannage
-
-**macOS : "book2word ne peut pas être ouvert" (développeur non identifié, ou code -47)** —
-l'application n'est pas signée par un compte développeur Apple payant (normal pour un usage
-associatif interne). Sur les versions récentes de macOS, le clic droit → "Ouvrir" ne suffit
-plus : allez dans **Réglages Système → Confidentialité et sécurité → Sécurité**, faites défiler
-jusqu'à "book2word a été bloqué...", cliquez sur **"Ouvrir quand même"**, confirmez, puis
-retentez le double-clic sur `book2word.app`. Ce n'est nécessaire qu'une seule fois (sur les
-macOS plus anciens, le clic droit → "Ouvrir" fonctionne toujours directement).
-
-**Windows : "Windows a protégé votre ordinateur" (SmartScreen)** — même principe côté Windows.
-Cliquez sur "Informations complémentaires" puis "Exécuter quand même".
-
-**L'application téléchargée ne s'ouvre pas du tout / rien ne se passe** — patientez quelques
-secondes au premier lancement (l'application est volumineuse, elle doit se décompresser en
-mémoire). Si rien ne s'ouvre après ~30 secondes, relancez-la ; si le problème persiste, essayez
-l'installation depuis les sources (option B) pour voir le message d'erreur exact dans le terminal.
-
-**"Aucun PDF trouvé dans input/"** — placez votre fichier dans le dossier `input/` (celui créé
-dans **Documents/book2word** pour l'application téléchargée, ou à la racine du projet pour une
-installation depuis les sources), puis relancez.
-
-**Une dépendance manque / erreur `ImportError`** — relancez
-`python3 -m pip install -r requirements.txt` dans le terminal (après avoir activé
-l'environnement, étape 2).
-
-**`zsh: command not found: pip`** — utilisez `python3 -m pip install ...` au lieu de
-`pip install ...` (voir étape 2). Si l'erreur persiste, l'environnement virtuel n'est
-probablement pas activé : relancez `source .venv/bin/activate` d'abord.
-
-**Le texte extrait est incohérent, tronqué ou plein de caractères bizarres** — le PDF contient
-probablement une couche de texte native de mauvaise qualité (fréquent sur les scans/photos).
-Relancez avec `--force-ocr` : l'outil relira alors les pages comme des images plutôt que de
-faire confiance à ce texte.
-
-**Les images sont mal recadrées / gardent une bordure noire** — sur des PDF photographiés de
-façon peu homogène (cadrage variable, main ou reflet visible sur certaines pages), le
-recadrage automatique n'est pas toujours fiable ; il s'abandonne alors sciemment plutôt que de
-mal recadrer (page listée dans le résumé). Une retouche manuelle dans Word reste possible.
-Vous pouvez aussi désactiver entièrement le recadrage avec `--no-crop`.
-
-**Le traitement est lent** — la reconnaissance de texte tourne sur le processeur (pas de carte
-graphique dédiée requise, mais c'est plus lent) : comptez environ 15–30 secondes par page.
-Pour un livre de 14 pages, prévoyez plusieurs minutes lors du premier essai (chargement du
-modèle) puis un peu moins ensuite.
-
-**Le fichier `.docx` est très volumineux** — réduisez `--dpi` (ex. `--dpi 200`) : l'image de
-chaque page sera plus légère.
+- **Résolution des images** : 300 par défaut. Plus haut = images plus nettes mais document
+  plus lourd et traitement plus long ; 200 suffit souvent si le fichier Word est trop gros.
+- **Langue du livre** : à changer si le livre n'est pas en français.
+- **Recadrer automatiquement les bordures sombres** : retire les bords noirs des pages
+  photographiées ou scannées.
+- **Sauvegarder les images avant/après nettoyage** : garde une image de chaque page avant et
+  après effacement du texte, pour vérifier le résultat de près.
+- **Modèle de mise en page** : le document Word généré reprend la police et la mise en page
+  (marges, taille de page) du fichier `template.docx`. Pour les changer, cliquez sur **Afficher
+  le modèle dans le dossier**, ouvrez ce fichier dans Word et modifiez le style *Normal* (dans
+  Word : clic droit sur « Normal » dans les styles → Modifier → choisir la police), puis
+  enregistrez.
 
 ---
 
-## 5. Limites à connaître
+## 4. Comprendre le résultat
 
-- Le nettoyage du texte sur l'image (remplissage du fond) n'est pas toujours parfait,
-  notamment sur de grandes zones de texte proches d'illustrations très contrastées. Les pages
-  concernées sont signalées automatiquement dans le résumé.
-- Le recadrage automatique fonctionne bien sur des scans propres, mais peut échouer sur des
-  photos peu homogènes (voir Dépannage ci-dessus).
-- La reconnaissance de texte (OCR) n'est jamais garantie à 100 %, en particulier sur des
-  polices très stylisées ou manuscrites : une relecture reste recommandée pour un usage
-  éditorial.
-- Cet outil ne contourne aucune protection PDF (mot de passe, DRM) : utilisez-le uniquement
+Le document Word contient, pour chaque page du livre, l'image nettoyée suivie du texte.
+
+En fin de conversion, la page indique les **pages à vérifier** : celles où l'effacement du
+texte sur l'image n'est pas certain à 100 %. Ouvrez le document Word et regardez ces pages en
+particulier.
+
+---
+
+## 5. En cas de problème
+
+**La page reste longtemps sur « Téléchargement du moteur de reconnaissance de texte »** —
+c'est la première conversion (voir Installation) : le téléchargement dépend de votre
+connexion. Le compteur en Mo doit avancer.
+
+**« Impossible de télécharger le moteur de reconnaissance de texte »** — vérifiez votre
+connexion internet, puis relancez la conversion. Le téléchargement reprend là où il s'était
+arrêté.
+
+**Le texte obtenu est incohérent, tronqué ou plein de caractères bizarres** — relancez la
+conversion en laissant cochée **Forcer la reconnaissance par image (OCR)**.
+
+**Les images gardent une bordure noire ou sont mal recadrées** — sur des pages photographiées
+de façon irrégulière (main ou reflet visible), l'application préfère ne pas recadrer plutôt
+que de mal recadrer. Retouchez l'image dans Word, ou décochez **Recadrer automatiquement**
+dans les Options avancées.
+
+**Le document Word est très lourd** — relancez avec une **Résolution des images** plus basse
+(par exemple 200) dans les Options avancées.
+
+**L'application ne s'ouvre pas** — au premier lancement, patientez une trentaine de secondes
+(l'application est volumineuse). Sur Mac, vérifiez l'étape « Ouvrir quand même » de
+l'installation. Si rien ne se passe, relancez-la.
+
+**Un message d'erreur s'affiche pendant une conversion** — un fichier `.log` portant le nom
+du livre se trouve dans **Documents/book2word/output** : transmettez-le à la personne qui
+s'occupe de l'outil, il contient le détail technique.
+
+---
+
+## 6. Limites à connaître
+
+- L'effacement du texte sur l'image n'est pas toujours parfait, notamment sur de grandes zones
+  de texte proches d'illustrations très contrastées. Les pages concernées sont signalées en
+  fin de conversion.
+- La reconnaissance de texte n'est jamais garantie à 100 %, en particulier sur des polices très
+  stylisées ou manuscrites : une relecture reste recommandée.
+- L'application ne contourne aucune protection PDF (mot de passe, DRM) : utilisez-la uniquement
   sur des fichiers dont vous avez le droit d'extraire le contenu.
 
 ---
 
-## Pour aller plus loin
+## Pour les développeurs
 
-Le fonctionnement interne (architecture, choix techniques) est documenté dans
-[CLAUDE.md](CLAUDE.md), destiné à quiconque doit faire évoluer le code.
+Installation depuis les sources, ligne de commande et fonctionnement interne :
+voir [CLAUDE.md](CLAUDE.md).

@@ -35,10 +35,11 @@ body {
   padding: 0 20px;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 6px 14px;
 }
-.logo { font-size: 1.4rem; font-weight: 600; }
+.logo { font-size: 1.4rem; font-weight: 600; display: inline-flex; align-items: center; gap: 10px; align-self: center; }
+.logo-icon { width: 36px; height: 36px; }
 .tagline { opacity: 0.85; font-size: 0.95rem; }
 
 .quit-form { margin-left: auto; }

@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>book2word</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <span class="logo">📖 book2word</span>
+      <span class="logo"><img src="{{ url_for('static', filename='favicon.png') }}" alt="" class="logo-icon">book2word</span>
       <span class="tagline">Livre PDF → document Word</span>
       <form action="{{ url_for('shutdown') }}" method="post" class="quit-form" id="quit-form">
         <button type="submit" class="btn-quit">Quitter l'application</button>

@@ -28,6 +28,7 @@ book2word/
 input/                  PDF à convertir, listés et choisis par numéro (assistant/web)
 output/                 .docx + .log générés, nommés d'après le PDF (incrémenté si collision)
 template.docx           police/mise en page par défaut du .docx généré (optionnel)
+assets/                 icône de l'app (icon.png/.icns/.ico) + make_icon.py qui les génère
 ```
 
 `web.py` ne duplique aucune logique : il appelle `cli.process_pdf`/`resolve_output_path`/
@@ -189,6 +190,12 @@ Points qui ont nécessité un vrai travail (ne pas les défaire par erreur) :
   minuteur sauf via `before_request`, et que la vérification (toutes les 60s) ignore bien un
   job actif même si personne n'interagit avec la page pendant qu'il tourne. Bouton "Quitter"
   toujours disponible en plus, pour un arrêt immédiat et volontaire.
+- **Icône** : `assets/icon.icns` (bundle macOS) / `assets/icon.ico` (exe Windows), branchées via
+  `icon=` dans `EXE` et `BUNDLE`. Générées par `assets/make_icon.py` (Pillow, dessin vectoriel
+  sur-échantillonné) qui produit aussi `book2word/static/favicon.png` (onglet + en-tête web).
+  Les fichiers générés sont versionnés : la CI ne relance pas le script. Pour modifier l'icône,
+  éditer le script, le relancer (`python assets/make_icon.py`) et committer les sorties.
+  Motif : livre ouvert + soleil levant, pour l'ASBL La Lumière (utilisée par ses membres).
 - `console=True` dans l'EXE du spec ne change rien sur macOS (Finder ne rattache jamais de
   terminal à un `.app`, cette option ne pilote que Windows/Linux) mais donne une console
   visible sur Windows — laissé tel quel, ça ne coûte rien et peut aider au diagnostic.
@@ -216,6 +223,31 @@ Points qui ont nécessité un vrai travail (ne pas les défaire par erreur) :
   fonctionne de bout en bout sur macOS, OCR compris — c'est le point le plus susceptible de
   casser silencieusement (imports cachés manquants pour torch/easyocr) si on modifie le spec.
   Toujours refaire ce test après une modification du spec, avant de déclencher la CI.
+
+## Installation depuis les sources et ligne de commande
+
+Le README est volontairement limité à l'app téléchargée et à l'interface web (public non
+technique) ; cette section regroupe ce qui concerne le développement.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate          # Windows : .venv\Scripts\activate
+python3 -m pip install -r requirements.txt   # télécharge PyTorch (plusieurs centaines de Mo)
+```
+
+Python 3.9+. Aucun logiciel externe (pas de Tesseract). `python3 -m pip` plutôt que `pip` :
+sur macOS, `pip` seul n'existe souvent pas. Les modèles EasyOCR (~90 Mo) se téléchargent à la
+première conversion OCR.
+
+En mode source, `input/`, `output/`, `debug/` et `template.docx` sont à la racine du dépôt
+(pas dans `~/Documents/book2word/`, réservé à la build empaquetée).
+
+- Interface web : `python3 webapp.py` (http://127.0.0.1:5057).
+- Assistant terminal : `python3 book2word.py` (liste les PDF de `input/`, pose les questions).
+- Ligne de commande : `python3 book2word.py input/livre.pdf [sortie.docx]`. Options principales :
+  `--book-type standard` (image à droite / texte à gauche ; défaut `mixed`), `--force-ocr`,
+  `--ocr-fallback` (OCR seulement pour les pages sans texte natif), `--dpi 300`, `--no-crop`,
+  `--debug`, `--verbose`, `--template modele.docx`, `--ocr-lang fr`. Liste complète : `--help`.
 
 ## Pour étendre
 
